@@ -113,26 +113,34 @@ if (uninstall) {
   // A skill is a directory. Checking only SKILL.md left any other file unprotected — editing
   // scripts/watch_pr.py and uninstalling would delete it silently. Every recorded file is compared,
   // and an unexpected extra file is treated as a change too (safer to keep than to delete).
+  // Returns null when the entry is exactly what was installed, otherwise the reason to keep it.
+  // It must never throw: an unreadable path or a file sitting where a skill directory belongs is a
+  // reason to KEEP the entry, not to abort an uninstall halfway through.
   const violation = (e) => {
-    if (e.kind === 'alias') {
-      return !e.recorded || sha(e.dest) === e.recorded ? null : 'sha256 differs — changed since install';
-    }
-    const rec = manifest.skills?.[e.name];
-    if (!rec) return 'no manifest entry for this directory';
-    if (rec.fileHashes) {
-      const now = filesUnder(e.dest);
-      const recorded = Object.keys(rec.fileHashes);
-      if (now.length !== recorded.length) return 'file list changed since install';
-      for (const rel of now) {
-        if (!(rel in rec.fileHashes)) return `unexpected file "${rel}"`;
-        if (sha(join(e.dest, rel)) !== rec.fileHashes[rel]) return `"${rel}" changed since install`;
+    try {
+      if (e.kind === 'alias') {
+        if (!e.recorded) return 'manifest has no recorded sha256';
+        return sha(e.dest) === e.recorded ? null : 'sha256 differs — changed since install';
       }
-      return null;
+      const rec = manifest.skills[e.name];
+      if (!statSync(e.dest).isDirectory()) return 'path is not a directory';
+      if (rec.fileHashes) {
+        const now = filesUnder(e.dest);
+        const recorded = Object.keys(rec.fileHashes);
+        if (now.length !== recorded.length) return 'file list changed since install';
+        for (const rel of now) {
+          if (!(rel in rec.fileHashes)) return `unexpected file "${rel}"`;
+          if (sha(join(e.dest, rel)) !== rec.fileHashes[rel]) return `"${rel}" changed since install`;
+        }
+        return null;
+      }
+      // Older manifests recorded only SKILL.md; keep that behaviour rather than refusing loudly.
+      const sk = join(e.dest, 'SKILL.md');
+      if (!existsSync(sk)) return 'SKILL.md is missing';
+      return rec.sha256 && sha(sk) === rec.sha256 ? null : 'sha256 differs — changed since install';
+    } catch (err) {
+      return `could not verify (${err.code ?? err.message}) — kept`;
     }
-    // Older manifests recorded only SKILL.md; keep that behaviour rather than refusing loudly.
-    const sk = join(e.dest, 'SKILL.md');
-    if (!existsSync(sk)) return 'SKILL.md is missing';
-    return rec.sha256 && sha(sk) === rec.sha256 ? null : 'sha256 differs — changed since install';
   };
 
   const toRemove = [];
