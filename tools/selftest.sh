@@ -75,6 +75,20 @@ if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
   else
     bad "--force did not clear the kept entry"
   fi
+  # A skill is a directory: editing a file other than SKILL.md must also be protected.
+  if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
+    printf '\n# edited after install\n' >> "$tmp/skills/ds-watch-pr/scripts/watch_pr.py"
+    if node tools/install.mjs --uninstall --target "$tmp/skills" >/dev/null 2>&1; then
+      bad "uninstall ignored an edited skill sub-file (scripts/watch_pr.py)"
+    elif [[ ! -f "$tmp/skills/ds-watch-pr/scripts/watch_pr.py" ]]; then
+      bad "uninstall deleted the edited sub-file anyway"
+    else
+      echo "   edited skill sub-file kept (not just SKILL.md)"
+    fi
+    node tools/install.mjs --uninstall --force --target "$tmp/skills" >/dev/null 2>&1
+  else
+    bad "reinstall for the sub-file check failed"
+  fi
 else
   bad "install into a scratch target failed, so the uninstall check could not run"
 fi
