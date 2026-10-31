@@ -20,7 +20,12 @@ step "gate 1: skills/ is the output of a successful build"
 node tools/stamp.mjs verify || bad "build stamp"
 
 step "gate 2: source contract (bundles + aliases, cross-root)"
-node tools/validate.mjs skills --aliases aliases --expect-aliases 6 --upstream upstream/deepseek-stack/skills || bad "source contract"
+if [[ -d upstream/deepseek-stack/skills ]]; then
+  node tools/validate.mjs skills --aliases aliases --expect-aliases 6 --upstream upstream/deepseek-stack/skills || bad "source contract"
+else
+  echo "   (upstream not fetched — body-preservation comparison skipped; run ./tools/fetch-upstream.sh)"
+  node tools/validate.mjs skills --aliases aliases --expect-aliases 6 || bad "source contract"
+fi
 
 step "gate 3: the installed root DSH actually reads"
 if [[ -d "$HOME/.agents/skills" ]]; then
