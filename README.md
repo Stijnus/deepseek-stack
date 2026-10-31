@@ -45,6 +45,11 @@ and the build log in [`PLAN.md`](PLAN.md).
 npx skills add Stijnus/deepseek-stack
 ```
 
+That installs the 29 skills (verified: byte-identical to this repo, lock file source
+`Stijnus/deepseek-stack`). It does **not** install the six gesture aliases — they are flat files under
+`aliases/`, which the `skills` CLI does not pick up. Use the DSH installer below when you want the
+`/ds-plan`-style gestures.
+
 **DeepSeek Harness**, straight into the user-level skill root (rank 500):
 
 ```bash
