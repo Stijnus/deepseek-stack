@@ -1,0 +1,36 @@
+name: gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: fetch the pinned upstream
+        run: bash tools/fetch-upstream.sh
+
+      - name: run the gates
+        run: bash tools/selftest.sh
+
+      - name: check the installed-root verifier against a scratch root
+        run: |
+          set -e
+          T="$(mktemp -d)"
+          node tools/install.mjs --target "$T/skills"
+          node tools/install.mjs --verify-install --target "$T/skills"
+          printf '\n<!-- edit -->\n' >> "$T/skills/ds-plan.md"
+          if node tools/install.mjs --verify-install --target "$T/skills"; then
+            echo "FAIL: verify-install accepted an edited file"; exit 1
+          fi
+          echo "OK: drift detector rejects an edited install"
