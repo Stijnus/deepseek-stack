@@ -2,6 +2,8 @@
 name: ds-best
 description: "Alias for ds-best-of-n. Run N attempts in parallel, pick the best, graft in the rest."
 disable-model-invocation: true
+metadata:
+  aliasOf: ds-best-of-n
 ---
 
 # ds-best

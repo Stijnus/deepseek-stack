@@ -61,6 +61,18 @@ if (!target.endsWith('/skills')) {
 const sha = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 const humanSize = (n) => (n < 1024 ? `${n}B` : `${(n / 1024).toFixed(1)}KB`);
 
+/** Declared alias target: metadata.aliasOf, then a flat aliasOf:, then the body mention. */
+function aliasTargetFrom(text) {
+  const meta = /^metadata:[ \t]*\n((?:[ \t]+.*\n?)*)/m.exec(text);
+  if (meta) {
+    const a = /^[ \t]+aliasOf:[ \t]*["']?([^"'\s#]+)/m.exec(meta[1]);
+    if (a) return a[1];
+  }
+  const flat = /^aliasOf:[ \t]*["']?([^"'\s#]+)/m.exec(text);
+  if (flat) return flat[1];
+  return /`(ds-[a-z0-9-]+)`/.exec(text)?.[1] ?? null;
+}
+
 /** Every regular file under dir, as paths relative to it. */
 function filesUnder(dir, prefix = '') {
   const out = [];
@@ -285,7 +297,7 @@ for (const n of aliasNames) {
   const from = join(aliasesSrc, `${n}.md`);
   const dest = join(target, `${n}.md`);
   const body = readFileSync(from, 'utf8');
-  const pointsTo = /`(ds-[a-z0-9-]+)`/.exec(body)?.[1] ?? null;
+  const pointsTo = aliasTargetFrom(body);
   console.log(`${dryRun ? 'would install' : 'install'}  ${(n + '.md').padEnd(20)} alias -> ${pointsTo ?? '?'} (0 catalog tokens, user-only in the / menu)`);
   if (dryRun) continue;
   rmSync(dest, { force: true });

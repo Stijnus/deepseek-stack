@@ -248,3 +248,32 @@ and install runs that check before and after copying.
 
 The skill and patch rows are the point: dropping aliases did not weaken the guard that catches an
 unbuilt or hand-edited `skills/` tree.
+
+---
+
+## Round 9 — an alias target is declared, not inferred
+
+`install.mjs` and `validate.mjs` both found an alias's target by taking the **first backticked
+`ds-*` token in the body**. That is prose parsing standing in for data: a body reading "start from
+`ds-principles`, then follow `ds-plan-loop`" validated clean and installed pointing at
+`ds-principles` — a live gesture that loads the wrong skill, with no warning.
+
+Fixed by declaring the target where it belongs: frontmatter `metadata.aliasOf` (a key DSH already
+parses as metadata and preserves). Both tools read the declaration first. Prose remains a fallback
+with a WARN, so older aliases keep working, and a declared name that is malformed or does not exist
+is a FAIL.
+
+| Case | Result |
+|---|---|
+| body names another `ds-*` first, `metadata.aliasOf` correct | metadata wins; WARN notes the disagreement; pass |
+| `metadata.aliasOf` points at a missing skill | **FAIL** `alias points to missing skill` |
+| no declaration, prose only | falls back with WARN `target inferred from prose` |
+| malformed declared name (`DS_Plan`) | **FAIL** `not a kebab-case skill name` |
+| `install.mjs --dry-run` with prose-first body | still resolves `ds-plan-loop` from the declaration |
+
+All six aliases now declare their targets, and `selftest` gained **gate 7** so the inference cannot
+come back: it asserts every alias declares `metadata.aliasOf`, that a prose mention cannot override
+the declaration, and that a missing declared target is rejected.
+
+Reinstall was required (the installed aliases changed) — gate 3 caught the drift with six
+`differs` entries before the reinstall, which is that gate earning its keep.
