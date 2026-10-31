@@ -172,6 +172,9 @@ One check guards the pack's premises: `tools/dsh-contract-check.mjs` reads the i
 asserts the six DSH behaviours the aliases and catalog rely on. A DSH upgrade that changed, say, the
 gesture filter would fail this instead of silently breaking the `/ds-*` names.
 
+If you installed with `npx skills add Stijnus/deepseek-stack` instead of `node tools/install.mjs`, you
+have the 29 skills but not the six gesture aliases: run `node tools/install.mjs` afterwards to add them.
+
 Four gates protect the install, each because a real failure got through once:
 
 - **Build stamp.** `tools/stamp.mjs` records digests of the patch and `skills/` after a successful
