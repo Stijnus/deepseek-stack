@@ -8,6 +8,7 @@
 #   gate 5  uninstall deleted by name alone, so a file edited after install was destroyed
 #   gate 6  the installed-root check passed on a root that had drifted from the repo
 #   gate 7  an alias target was inferred from prose, so an earlier mention changed what it pointed at
+#   gate 8  the DSH contract the pack relies on was pinned by comments only, never re-checked
 #
 # The only tree these gates mutate is a throwaway temp target; the real install is untouched.
 set -uo pipefail
@@ -200,6 +201,10 @@ else
   echo "   a declared target that does not exist is rejected"
 fi
 rm -rf "$tmp"
+
+step "gate 8: the pack's DSH assumptions (and the checker itself)"
+node tools/dsh-contract-check.mjs --self-test || bad "contract-checker self-test failed"
+node tools/dsh-contract-check.mjs || bad "DSH contract changed — re-read docs/DSH-MAPPING.md before trusting the aliases"
 
 printf '\n'
 if (( fail )); then echo "SELFTEST FAILED"; exit 1; fi
