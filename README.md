@@ -88,7 +88,7 @@ Unsure which to use? Ask for `ds-help` — it maps the task to exactly one skill
 
 ```
 skills/            the 29 optimized skills — this is what `npx skills add` installs
-aliases/           six gesture-only aliases (disable-model-invocation: true)
+aliases/           six gesture-only aliases (disable-model-invocation: true; target in metadata.aliasOf)
 tools/
   fetch-upstream.sh  clone the pinned pristine upstream into upstream/ (not committed)
   build.sh           rebuild skills/ = upstream + optimize.patch, validate, then swap

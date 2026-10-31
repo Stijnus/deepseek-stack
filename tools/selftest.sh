@@ -7,6 +7,7 @@
 #   gate 4  a hand edit could drift skills/ away from the reviewable patch
 #   gate 5  uninstall deleted by name alone, so a file edited after install was destroyed
 #   gate 6  the installed-root check passed on a root that had drifted from the repo
+#   gate 7  an alias target was inferred from prose, so an earlier mention changed what it pointed at
 #
 # The only tree these gates mutate is a throwaway temp target; the real install is untouched.
 set -uo pipefail
@@ -94,6 +95,40 @@ if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
   fi
 else
   bad "scratch install failed, so the drift detector could not be tested"
+fi
+rm -rf "$tmp"
+
+step "gate 7: alias targets are declared, not inferred"
+tmp="$(mktemp -d)"
+cp -R aliases "$tmp/aliases"
+undeclared=$(grep -L 'aliasOf:' "$tmp"/aliases/*.md 2>/dev/null | wc -l | tr -d ' ')
+if [[ "$undeclared" != 0 ]]; then
+  bad "$undeclared alias file(s) do not declare metadata.aliasOf"
+else
+  echo "   all aliases declare metadata.aliasOf"
+fi
+python3 - "$tmp/aliases/ds-plan.md" <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+open(p, 'w').write(s.replace("Alias for `ds-plan-loop`. Load that skill",
+                             "Start from `ds-principles`, then follow `ds-plan-loop`. Load that skill"))
+PYEOF
+if node tools/validate.mjs skills --aliases "$tmp/aliases" --expect-aliases 6 >/dev/null 2>&1; then
+  echo "   an earlier prose mention does not override the declared target"
+else
+  bad "a body mention overrode the declared alias target"
+fi
+python3 - "$tmp/aliases/ds-plan.md" <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+open(p, 'w').write(s.replace('aliasOf: ds-plan-loop', 'aliasOf: ds-nopeals'))
+PYEOF
+if node tools/validate.mjs skills --aliases "$tmp/aliases" --expect-aliases 6 >/dev/null 2>&1; then
+  bad "validator accepted an alias whose declared target does not exist"
+else
+  echo "   a declared target that does not exist is rejected"
 fi
 rm -rf "$tmp"
 

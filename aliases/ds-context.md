@@ -2,6 +2,8 @@
 name: ds-context
 description: "Alias for ds-context-reset. Keep PROGRESS.md and hand a long task to a fresh context."
 disable-model-invocation: true
+metadata:
+  aliasOf: ds-context-reset
 ---
 
 # ds-context

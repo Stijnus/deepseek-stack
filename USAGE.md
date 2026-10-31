@@ -41,6 +41,10 @@ Short names work too. Six gesture-only aliases cover the natural abbreviations �
 | `/ds-best` | `ds-best-of-n` |
 | `/ds-audit` | `ds-design-audit` |
 
+Each alias declares its target in `metadata.aliasOf`, and the tooling reads that declaration
+rather than the prose — a body that mentions another `ds-*` skill first no longer changes what the
+alias points at.
+
 Any other name must match a real skill exactly (`/ds-unstick`, not `/ds-unstick-me`). A near-miss
 is silently ordinary prose — DSH will not guess.
 

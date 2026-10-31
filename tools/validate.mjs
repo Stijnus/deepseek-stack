@@ -63,6 +63,23 @@ function parseFrontmatter(text) {
     if (!m) throw new Error(`unparsable frontmatter line ${i + 1}: ${JSON.stringify(line)}`);
     const key = m[1];
     let raw = m[2].trim();
+    // One level of nested mapping, e.g. `metadata:` followed by `  aliasOf: ds-plan-loop`.
+    if (raw === '') {
+      const children = {};
+      let j = i + 1;
+      while (j < lines.length && /^\s+\S/.test(lines[j])) {
+        const child = /^\s+([A-Za-z0-9_-]+):(.*)$/.exec(lines[j]);
+        if (child) {
+          let cv = child[2].trim();
+          if ((cv.startsWith('"') && cv.endsWith('"') && cv.length > 1) || (cv.startsWith("'") && cv.endsWith("'") && cv.length > 1)) cv = cv.slice(1, -1);
+          children[child[1]] = cv;
+        }
+        j++;
+      }
+      if (Object.keys(children).length) { data[key] = children; i = j - 1; continue; }
+      data[key] = '';
+      continue;
+    }
     if (raw === '|' || raw === '>' || raw === '|-' || raw === '>-') {
       const block = [];
       while (i + 1 < lines.length && (/^\s+\S/.test(lines[i + 1]) || lines[i + 1].trim() === '')) {
@@ -177,9 +194,13 @@ const known = new Set(files.map((f) => f.dir));
 const hasBundles = files.some((f) => !f.flat);
 if (hasBundles) {
   for (const f of files.filter((x) => x.flat)) {
-    const target = /`(ds-[a-z0-9-]+)`/.exec(readFileSync(f.path, 'utf8'))?.[1];
+    const text = readFileSync(f.path, 'utf8');
+    const parsedFlat = parseFrontmatter(text);
+    const meta = (parsedFlat?.data?.metadata && typeof parsedFlat.data.metadata === 'object') ? parsedFlat.data.metadata : {};
+    const target = (typeof meta.aliasOf === 'string' ? meta.aliasOf.trim() : null)
+      ?? /`(ds-[a-z0-9-]+)`/.exec(text)?.[1] ?? null;
     if (!target) continue;
-    const r = results.find((x) => x.name === (parseFrontmatter(readFileSync(f.path, 'utf8'))?.data.name ?? f.dir));
+    const r = results.find((x) => x.name === (parsedFlat?.data?.name ?? f.dir));
     if (!r) continue;
     if (!known.has(target)) {
       r.level = 'FAIL';
@@ -226,9 +247,17 @@ if (aliasesDir) {
       add2('FAIL', 'alias must set disable-model-invocation: true or it lands in the model catalog and costs tokens');
     }
     if (!String(body).trimStart().startsWith('# ')) add2('WARN', 'body should start with an H1');
-    const target = /`(ds-[a-z0-9-]+)`/.exec(body)?.[1];
-    if (!target) add2('FAIL', 'alias body names no target skill in backticks');
+    // The target is declared data, not prose. Reading it from the body meant any earlier
+    // backticked ds-* mention silently became "the target".
+    const meta = (data.metadata && typeof data.metadata === 'object' && !Array.isArray(data.metadata)) ? data.metadata : {};
+    const declared = typeof meta.aliasOf === 'string' ? meta.aliasOf.trim() : null;
+    const prose = /`(ds-[a-z0-9-]+)`/.exec(body)?.[1] ?? null;
+    const target = declared ?? prose;
+    if (!target) add2('FAIL', 'no target: declare metadata.aliasOf (or name one ds-* skill in the body)');
+    else if (!NAME_RE.test(target)) add2('FAIL', `alias target "${target}" is not a kebab-case skill name`);
     else if (!known.has(target)) add2('FAIL', `alias points to missing skill "${target}" — rename or drop the alias`);
+    if (!declared) add2('WARN', 'target inferred from prose — declare metadata.aliasOf instead');
+    else if (prose && prose !== declared) add2('WARN', `body mentions "${prose}" but metadata.aliasOf is "${declared}" — metadata wins`);
     results.push({ name: base, level, notes, descLen: data.description ? [...String(data.description)].length : 0, modelHidden: true });
   }
 }
