@@ -1,7 +1,9 @@
 ---
 name: ds-ship
-description: "Takes a change all the way from code to a merged pull request without supervision: build it, prove it, review it, file the PR, watch it and merge it. Use when the user says ship it, send it all the way, merge when green, or /ds-ship."
+description: "Take a change from code to a merged PR unsupervised: prove it, review it, file it, watch it, merge on a green gate. Use for 'ship it' or 'merge when green'."
 ---
+
+# ds-ship
 
 Own the work from its current state to a merged PR while nobody is watching.
 
@@ -34,3 +36,17 @@ Merge gate, all true on the latest head: proof covers the full diff, required ch
 - If no question tool exists or nobody answers, leave the PR open and unmerged, and start your final message with the question.
 - Evidence is output you saw in this session. A claim without output is not proof.
 - Keep scope fixed. Decline extra work from reviews and list it as follow-ups.
+
+## On DeepSeek Harness
+
+- This is the unattended run: `create_goal` at the start so the work survives compaction, and
+  `update_goal` as the gate items close.
+- "Do not end your turn while checks are pending" is `job_output({ job_id, wait: true })` on the
+  watcher's background job. Never `sleep`, never a polling loop.
+- "Ask with the harness question tool" is `ask_user_question` with options, carrying the PR link,
+  the blocker and your recommendation. No answer: leave the PR open and lead the final message
+  with the question.
+- Push, force-push and merge can stop on the approval gate. A prompt is not a green gate: report
+  what it asked and what you chose, and do not retry it in a loop.
+- Evidence is `bash` output from this session, `gh pr checks` included, pasted rather than
+  remembered.

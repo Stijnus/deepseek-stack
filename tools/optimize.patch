@@ -1,0 +1,801 @@
+diff --git a/skills/ds-adopt/SKILL.md b/skills/ds-adopt/SKILL.md
+index 70b8d31..e99bae6 100644
+--- a/skills/ds-adopt/SKILL.md
++++ b/skills/ds-adopt/SKILL.md
+@@ -1,8 +1,10 @@
+ ---
+ name: ds-adopt
+-description: "Takes over an existing PR, branch or agent thread and finishes its original goal while keeping credit for the first contributors. Use when the user says take over, adopt, pick up or finish this PR, or /ds-adopt."
++description: "Take over someone else's PR, branch or agent thread, finish its original goal and keep their credit. Use for 'take over', 'adopt' or 'finish this PR'."
+ ---
+ 
++# ds-adopt
++
+ Finish someone else's work as if it were yours, but credit them for what they did.
+ 
+ ## Steps
+@@ -31,3 +33,14 @@ Finish someone else's work as if it were yours, but credit them for what they di
+ - Do not defend the old code because it exists. Do not add unrelated features.
+ - Do not edit, merge or close the original PR without permission.
+ - State plainly what you could not verify.
++
++## On DeepSeek Harness
++
++- Step 1 and step 8 are `gh` through `bash` (`gh pr view`, `gh pr diff`, `gh pr checks`). The handoff
++  notes are hints; the API is the current state.
++- A takeover that runs unattended: `create_goal` at the start and `update_goal` at each
++  milestone, with `PROGRESS.md` carrying what the goal record cannot.
++- Step 7's verification is `bash` output, command by command. A claim without one is not the check
++  step 7 asks for.
++- Filing and watching stay `ds-pr` and `ds-watch-pr`. Their DSH sections own the push gate and the
++  watcher job, so this skill adds nothing there.
+diff --git a/skills/ds-best-of-n/SKILL.md b/skills/ds-best-of-n/SKILL.md
+index d41407a..eb2563e 100644
+--- a/skills/ds-best-of-n/SKILL.md
++++ b/skills/ds-best-of-n/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-best-of-n
+-description: "Run N independent attempts at the same task in parallel, pick the strongest as the base, and graft the best parts of the others into it. Use when one attempt at a non-trivial artifact could land on the wrong shape, or for /ds-best-of-n, 'try a few versions', 'best of 3'."
++description: "Run N independent attempts at the same task in parallel, pick the strongest as the base, graft the best parts of the others in. Use when one try could land on the wrong shape, or for best of 3."
+ ---
+ 
+ # ds-best-of-n
+@@ -27,3 +27,14 @@ One attempt is a sample, not an answer. DeepSeek is cheap enough that three to f
+ - Never pick by reading the attempt's own summary. Pick by running it.
+ - Do not let one attempt see another before scoring.
+ - Keep the losing attempts until the final checks pass.
++
++## On DeepSeek Harness
++
++- Step 3 is N `subagent` calls in ONE assistant message: same prompt, different output path. Separate
++  messages serialize the attempts and lose the independent-sample property.
++- Output locations live inside the workspace (writes outside it fail closed): `attempts/1/`, not
++  `/tmp/attempts/1/`. A git worktree also works.
++- Step 4's check is `bash` inside each attempt's directory and read its real output. The attempt's own
++  summary is never the score.
++- N stays small (3-5). `workflow` is built for dozens of slices, not five; hand-written `subagent` calls
++  are easier to audit at this size.
+diff --git a/skills/ds-blast-radius/SKILL.md b/skills/ds-blast-radius/SKILL.md
+index 423cd32..6903061 100644
+--- a/skills/ds-blast-radius/SKILL.md
++++ b/skills/ds-blast-radius/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-blast-radius
+-description: "Find what a change could break outside its own diff, then prove the key safety fact by running real code. Use before shipping a risky or untrusted change, for 'what could this break', 'blast radius of X', or /ds-blast-radius."
++description: "Find what a change could break outside its own diff, then prove each key safety fact by running real code. Use for 'what could this break' or before shipping a risky change."
+ ---
+ 
+ # ds-blast-radius
+@@ -30,3 +30,11 @@ Listing callers is easy. The job is finding the breakage that a text search will
+ 
+ - A convincing write-up is not proof. Show output.
+ - Do not fix anything here. Hand fixes to the normal flow.
++
++## On DeepSeek Harness
++
++- Level 4 is one `bash` script calling the exact function. Paste the command and its output.
++- Independent probes: separate `bash({ run_in_background: true })` jobs started in one message,
++  each collected with `job_output({ job_id, wait: true })`.
++- Level 5 stays a real app run. No harness tool substitutes for it, so state plainly when you
++  stopped at level 4 and why.
+diff --git a/skills/ds-blueprint/SKILL.md b/skills/ds-blueprint/SKILL.md
+index 2fd4f95..97196aa 100644
+--- a/skills/ds-blueprint/SKILL.md
++++ b/skills/ds-blueprint/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-blueprint
+-description: "Design the types, function signatures and module layout first, agree on that shape, then implement against it. Use when work is non-trivial and coding straight away would lock in the wrong structure, or for /ds-blueprint, 'design this first', 'architect this'."
++description: "Fix types, signatures and module layout before writing bodies, then implement one stub at a time. Use for 'design this first', 'architect this', or a change that would lock in the wrong shape."
+ ---
+ 
+ # ds-blueprint
+@@ -27,3 +27,12 @@ Fix the shape of the code before writing the bodies, so the model fills in a pla
+ - Signatures change only through step 6's revise path, never silently.
+ - Keep each sketch file small enough to read in one pass.
+ - Evidence is compiler and test output, not "it should work".
++
++## On DeepSeek Harness
++
++- Step 2's sketches: one `subagent` call each, in one assistant message so they build in parallel.
++  Give every worker the same brief and a different structural bet.
++- Step 4 is a `bash` run of the real type checker. Paste the command with its output.
++- Step 5's "wait for agreement" is `ask_user_question` with the sketches as options.
++- Unattended: `create_goal` keeps the run alive across compaction, and the choice goes in
++  `PROGRESS.md` (the /ds-ledger route).
+diff --git a/skills/ds-catchup/SKILL.md b/skills/ds-catchup/SKILL.md
+index 0528087..58629cb 100644
+--- a/skills/ds-catchup/SKILL.md
++++ b/skills/ds-catchup/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-catchup
+-description: "Give the user a short plain-language catch-up on what changed since their last message, followed by every decision still waiting on them. Use when the user returns after a long or unattended run, asks 'where are we', 'what did I miss', or types /ds-catchup."
++description: "Give a short plain-language catch-up on what changed since the user's last message, then every decision still waiting on them. Use after a long run or 'where are we'."
+ ---
+ 
+ # ds-catchup
+@@ -26,3 +26,12 @@ Bring the user back up to speed in a minute, and hand them every call only they
+ - Work you can still do yourself is not a decision for the user.
+ - Name things the way the user would, not by internal labels.
+ - Short sentences, no jargon.
++
++## On DeepSeek Harness
++
++- Step 3's fresh state is `bash` output: `git status`, `git log --oneline`, `gh pr view`, the test
++  command. A number you remember is not a number you checked.
++- Background work still running: `job_output({ job_id })` reads what it produced. A job you never
++  collected is work you cannot report.
++- A decision that is a real choice is `ask_user_question` with options, so the user answers once.
++  The catch-up text still lists every one of them.
+diff --git a/skills/ds-context-reset/SKILL.md b/skills/ds-context-reset/SKILL.md
+index 5565c6c..0d31b65 100644
+--- a/skills/ds-context-reset/SKILL.md
++++ b/skills/ds-context-reset/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-context-reset
+-description: "Keep a PROGRESS.md for long tasks and move to a fresh session or subagent that reads only that file when the context gets long or stale. Use when a task spans many steps or sessions, when the model starts repeating itself, forgets earlier facts, or re-tries old fixes, or when the context window is past about half full. Invoke as /ds-context-reset."
++description: "Keep PROGRESS.md as the state of a long task and hand off to a fresh context that reads only that file. Use when the context is half full, or the model repeats itself or retries old fixes."
+ ---
+ 
+ # ds-context-reset
+@@ -34,3 +34,12 @@ Store the state of the work in a file, not in the chat, so a fresh context can c
+ - Never put secrets or tokens in it.
+ - The fresh context reads the file, not the old transcript.
+ - Pair with ds-plan-loop for the Next list and with ds-unstick for the failed-approach notes.
++
++## On DeepSeek Harness
++
++- PROGRESS.md alone is not durable: pair it with `create_goal`/`update_goal`. The goal survives automatic
++  continuation rounds; the file survives context resets. A goal without the file loses the evidence.
++- Step 6's fresh context is a `subagent` call, not `subagent_fork` — fork carries the stale history this
++  skill exists to drop. Pass step 6's instruction verbatim and nothing else.
++- Step 7's baseline is a `bash` command in the new workspace path. If it fails, fix that before any edit.
++- Three resets on one Next item: `ask_user_question` with PROGRESS.md as the report, not a summary of it.
+diff --git a/skills/ds-design/SKILL.md b/skills/ds-design/SKILL.md
+index 3b094fe..25014db 100644
+--- a/skills/ds-design/SKILL.md
++++ b/skills/ds-design/SKILL.md
+@@ -1,8 +1,10 @@
+ ---
+ name: ds-design
+-description: "Builds a frontend with a clear visual direction instead of the generic AI look. Use when you create a new page, app screen, or component, or restyle one that looks templated. Run as /ds-design."
++description: "Build a web frontend with a real visual direction, not the generic AI look: direction note, tokens, every state, accessibility. Use for a new page, screen or restyle; native macOS: design-kit."
+ ---
+ 
++# ds-design
++
+ Build a UI that does not look like the default output for any similar prompt.
+ 
+ ## Steps
+@@ -45,3 +47,16 @@ Use one of these only if the brief asks for it:
+ 
+ - When the brief specifies a font, color, or style, use it, even if it is on the banned list.
+ - A refinement keeps the identity of the UI. A redesign keeps its content and function.
++
++## On DeepSeek Harness
++
++- `moodboard({ action: "active" })` before step 2. Those pinned references are this project's
++  style authority: match their typography, palette, spacing, radius and iconography rather than
++  inventing a look or falling back on the banned defaults.
++- Asking a narrower question: `moodboard({ action: "query", tags: ["palette"] })` returns only the
++  references tagged for what you are deciding.
++- If `vibe-to-ui` is also loaded it carries its own inspiration library. The pinned `moodboard` is
++  still the authority for this project; use the other library only when the user asks for it by
++  name, and never mix the two palettes in one screen.
++- Step 9's screenshots are a `bash` run of the repo's own build or snapshot command at about
++  1440px and 390px. Fix in one batch, then take new ones.
+diff --git a/skills/ds-design-audit/SKILL.md b/skills/ds-design-audit/SKILL.md
+index 4535745..38147be 100644
+--- a/skills/ds-design-audit/SKILL.md
++++ b/skills/ds-design-audit/SKILL.md
+@@ -1,8 +1,10 @@
+ ---
+ name: ds-design-audit
+-description: "Reviews an existing UI with scores based on evidence, then fixes the highest-impact problems. Use when a page or app screen looks generic, cluttered, or unfinished, or before you ship UI work. Run as /ds-design-audit."
++description: "Score an existing UI 1-5 from screenshots, fix the worst problems, re-score. Use when a page looks generic or unfinished; for a WCAG or guideline audit use accessibility or web-design-guidelines."
+ ---
+ 
++# ds-design-audit
++
+ Score a UI from what is on the screen, fix the worst problems, and show that the fixes work.
+ 
+ ## Steps
+@@ -35,3 +37,13 @@ Score a UI from what is on the screen, fix the worst problems, and show that the
+ - Do not change factual copy, prices, claims, or feature behavior without asking.
+ - If the brief requires a style that this skill would flag, it is not a fault.
+ - If the UI needs a full rebuild, recommend /ds-design. Do not rebuild it in this skill.
++
++## On DeepSeek Harness
++
++- `moodboard({ action: "active" })` first. It defines what on-brand means for the typography,
++  color, spacing and radius scores, so a deliberate choice in the references is not marked down
++  as a fault.
++- Step 1's render: start the app or dev server with `bash({ run_in_background: true })` and keep
++  the job id; the step 2 screenshots are `bash` runs against that job.
++- Step 7's "without asking" on copy, prices and claims: `ask_user_question`, so the answer is
++  recorded instead of assumed.
+diff --git a/skills/ds-explain/SKILL.md b/skills/ds-explain/SKILL.md
+index 06408b1..2eac8e0 100644
+--- a/skills/ds-explain/SKILL.md
++++ b/skills/ds-explain/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-explain
+-description: "Explain how a piece of code works, why it is built that way, and what that means, in plain language a person can follow. Use for 'how does X work', 'why is it like this', 'teach me this', onboarding to a subsystem, or /ds-explain."
++description: "Explain how code works and why it has its current shape, in plain language with cited files and lines. Use for 'how does X work', 'why is it like this' or onboarding."
+ ---
+ 
+ # ds-explain
+diff --git a/skills/ds-help/SKILL.md b/skills/ds-help/SKILL.md
+index 711e200..ceb8fc3 100644
+--- a/skills/ds-help/SKILL.md
++++ b/skills/ds-help/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-help
+-description: "Pick the right deepseek-stack skill for a task and explain how the pack fits together. Use when the user asks which skill to use, what the pack contains, or types /ds-help."
++description: "Pick the right deepseek-stack skill for a task and say how the pack fits together. Use when unsure which skill applies, when asked what the pack can do, or what to run next."
+ ---
+ 
+ # ds-help
+@@ -41,3 +41,12 @@ Match the task to one skill, say why in one line, then run it.
+ 
+ - Recommend one skill. Name a second only if the task clearly has two phases.
+ - If no skill fits, say so and work with ds-mode alone.
++
++## On DeepSeek Harness
++
++- Load a skill with `skill({ name })` before following it. The catalog carries one-line
++  summaries only; the instructions live in the file.
++- If the user already typed `/ds-plan-loop`, that body is injected into the step — follow it
++  directly instead of loading it a second time.
++- `ds-mode` is the always-on layer; recommend an extra skill only when the task matches one.
++- Loading re-reads the file, so a re-run after an edit picks up the new text with no restart.
+diff --git a/skills/ds-jury/SKILL.md b/skills/ds-jury/SKILL.md
+index d3f7fdd..4073acd 100644
+--- a/skills/ds-jury/SKILL.md
++++ b/skills/ds-jury/SKILL.md
+@@ -1,15 +1,17 @@
+ ---
+ name: ds-jury
+-description: "Gets independent reviews of a change from two or three different models or providers and loops on fixes until they agree. Use when the user says jury, panel review, second opinions, ask other models, or /ds-jury."
++description: "Put a change in front of two or three independent models and loop on fixes until they agree. Use for jury, panel review or second opinions — different models, not another review pass."
+ ---
+ 
++# ds-jury
++
+ Get two or three independent reviewers to judge the same change, then fix until they agree.
+ 
+ ## Steps
+ 
+ 1. Get the work ready first. Answer open PR comments, fix known issues and run the relevant checks. Skip this only if the user wants to throw the code away.
+ 2. Pick the jurors. Use models the user named. Otherwise pick the strongest available model from two or three different providers, at high reasoning effort.
+-3. Find a way to reach them in this harness: team workers or subagents with a model setting, a second agent CLI in the terminal (for example a Codex or Claude CLI), or an API call. If only one model is available, start two or three fresh-context subagents of that model, each with a different persona: correctness, security and edge cases, simplicity and scope.
++3. Reach them in this harness: `list_subagent_models`, then one `subagent({provider, model, reasoning_effort})` per juror. Fall back to a second agent CLI in the terminal, or an API call. If only one model is available, start two or three fresh-context subagents of that model, each with a different persona: correctness, security and edge cases, simplicity and scope.
+ 4. Write one brief for all jurors: repo path, base SHA, diff command, goal in one sentence, out-of-scope items and check results. Tell them to review only and change nothing.
+ 5. Ask each juror for: a verdict (APPROVE or CHANGES), a score out of 10 and findings as `id severity file:line claim fix`. Severity is blocker, should or nit.
+ 6. Run the jurors in parallel. Wait for all of them. A timeout or error is not approval.
+@@ -29,3 +31,14 @@ Get two or three independent reviewers to judge the same change, then fix until
+ - Say which jurors are the same model as each other. Do not claim a provider you did not reach.
+ - Never invent a score or verdict.
+ - Guard the scope. Decline new features and list them as follow-ups.
++
++## On DeepSeek Harness
++
++- Step 2's "different providers" starts with `list_subagent_models`: only routes it returns are
++  claimable. A provider you did not call is a provider you must not name.
++- Each juror is `subagent({ provider, model, reasoning_effort })`. Same provider and model twice is a
++  persona, not a juror — say which jurors are the same model (step 9).
++- All jurors go in ONE assistant message, N `subagent` calls. Sequential messages run them one after
++  another and turn the jury into a queue; step 6's parallel requirement is that message boundary.
++- One provider reachable: say it plainly, then run the step-3 personas as three fresh `subagent` calls.
++- `workflow` is for a dozen or more independent slices. Three jurors do not justify it.
+diff --git a/skills/ds-ledger/SKILL.md b/skills/ds-ledger/SKILL.md
+index 06ce435..f867859 100644
+--- a/skills/ds-ledger/SKILL.md
++++ b/skills/ds-ledger/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-ledger
+-description: "Keep a one-row-per-decision log during long or unattended runs, and re-read it before each step so the run does not drift from its goal. Use for multi-phase or autonomous work, work a human will review later, or /ds-ledger."
++description: "Log one row per decision during long or unattended work and reread the goal row before each step so the run cannot drift. Use for multi-phase or autonomous runs a human reviews later."
+ ---
+ 
+ # ds-ledger
+@@ -18,7 +18,7 @@ A long run forgets its own reasons. A short written ledger keeps the goal in vie
+    - why: the reason in plain words.
+    - evidence: a pointer, never prose. A commit hash, `file:line`, a command and its result, or an artifact path.
+    - result: the outcome, such as "tests pass", "reverted", "open".
+-4. Keep each cell on one line with no tabs.
++4. Keep each cell on one line. The tab is the separator, so a cell must not contain one.
+ 5. Log reverts and dropped work too, with the reason. Failures are the most useful rows.
+ 6. At the end, add a summary row and point the user to the file. Commit it only if a reviewer needs it.
+ 
+@@ -32,3 +32,13 @@ A long run forgets its own reasons. A short written ledger keeps the goal in vie
+ - Every row needs evidence you can open or rerun. "Looked fine" is not evidence.
+ - Write rows the way you would tell a teammate, plain and concrete.
+ - Do not rewrite old rows. Append corrections.
++
++## On DeepSeek Harness
++
++- The ledger is a plain TSV: append rows with `bash` (`printf '...\n' >> .ds-ledger.tsv`) so every cell
++  stays one line and no tool reflows it.
++- An unattended run that must outlive a context reset: `create_goal` for the objective plus the ledger
++  file for the reasons. The goal survives continuation rounds; the file survives resets.
++- Evidence pointers for background work are job ids: `bash({ run_in_background: true })` returns one,
++  and the row records it; drain with `job_output({ job_id, wait: true })` before claiming a result.
++- "Three rows with no progress" is a stop for the run, not a nudge: report and end the turn.
+diff --git a/skills/ds-lessons/SKILL.md b/skills/ds-lessons/SKILL.md
+index 0510d48..fde739f 100644
+--- a/skills/ds-lessons/SKILL.md
++++ b/skills/ds-lessons/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-lessons
+-description: "Find mistakes agents keep repeating in this repo and turn each into structure that blocks it, preferring types over lint over tests over docs, plus an end-of-session reflection. Use after a user correction, when the same fix comes up twice, at the end of a long session, or for /ds-lessons."
++description: "Turn repeated agent mistakes in this repo into structure, types, checks or rules, plus an end-of-session reflection. Use after a correction or when the same fix comes up twice."
+ ---
+ 
+ # ds-lessons
+@@ -30,3 +30,12 @@ An instruction an agent can skip is a wish. Make repeated mistakes fail loudly i
+ 
+ - If the fix is structural, do not also add prose. The prose was the symptom.
+ - Report each class with evidence, the level chosen, and why a higher level did not work.
++
++## On DeepSeek Harness
++
++- Step 4's proof is a `bash` run: paste the check failing with the mistake re-introduced, then the
++  same check passing with it removed.
++- Write the step 6 reflection to `PROGRESS.md`. A chat-only note is gone after a context reset, and
++  `create_goal`/`update_goal` keeps the rule work alive across automatic rounds.
++- A rule meant to outlive the session goes into the repo's agent instruction file in the same
++  change. Nothing in the harness enforces a rule that lives only in a message.
+diff --git a/skills/ds-mode/SKILL.md b/skills/ds-mode/SKILL.md
+index f4ccc13..ac7adff 100644
+--- a/skills/ds-mode/SKILL.md
++++ b/skills/ds-mode/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-mode
+-description: "Always-on working style for DeepSeek agents: restate the task, read before editing, small verified steps, evidence before done, lean context, short reports. Use when starting any coding task, when the user types /ds-mode, or when work starts to drift."
++description: "Run every coding task tight: restate the goal, read before editing, small verified steps, evidence before done. Use when work drifts or a claim outruns its proof."
+ ---
+ 
+ # DeepSeek working mode
+@@ -27,7 +27,7 @@ Apply this on every task. It keeps the loop tight and the claims honest.
+ 
+ - Read files in the parts you need, not whole when a range will do.
+ - Keep summaries in your context, not raw output. Trim long logs to the lines that matter.
+-- Send bulk reading, wide searches, and large fan-out to subagents when the harness has them. Ask each for a short conclusion with file paths.
++- Send bulk reading, wide searches and large fan-out to subagents. Ask each for a short conclusion with file paths.
+ - Do not reread a file you just edited. Do not repeat a search you already ran.
+ 
+ ## Before you say done
+@@ -48,3 +48,12 @@ Apply this on every task. It keeps the loop tight and the claims honest.
+ ## Comments in code
+ 
+ Write a comment only to explain a reason the code cannot show. Delete comments that narrate what the next line does.
++
++## On DeepSeek Harness
++
++- The numbered plan in "Before you act" is `todo_write`: one todo per checkable step, updated as you go.
++- Pause points are `ask_user_question` with real options, not a prose ask. Irreversible actions may also
++  stop on a DSH approval prompt — a prompt is not a yes; say what it asked and what you chose.
++- Bulk reading and wide searches: one `subagent` call per slice, all in the same assistant message so
++  they run in parallel. Ask each for a short conclusion with file paths.
++- A slow check is `bash({ run_in_background: true })`, drained with `job_output({ job_id, wait: true })`.
+diff --git a/skills/ds-plan-loop/SKILL.md b/skills/ds-plan-loop/SKILL.md
+index 8baa77b..c9a1802 100644
+--- a/skills/ds-plan-loop/SKILL.md
++++ b/skills/ds-plan-loop/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-plan-loop
+-description: "Write a numbered plan with an acceptance check for each step, critique it once in a fresh pass, revise it, then execute one step at a time. Use when a task touches more than one file, has unclear scope, or failed before because steps were missed. Invoke as /ds-plan-loop."
++description: "Plan in numbered steps, each with an acceptance check, critique the plan once in a fresh pass, then build one step at a time. Use when a task spans several files or scope is unclear."
+ ---
+ 
+ # ds-plan-loop
+@@ -33,3 +33,18 @@ Plan before coding, check the plan once, then build the task one verified step a
+ - Do one step per diff. Do not batch steps to save time.
+ - Do not add steps that the goal does not need.
+ - Keep the plan short: about 3-10 steps. Split bigger work into separate plans.
++
++## On DeepSeek Harness
++
++- The plan in step 2 is `todo_write`: one todo per step, the acceptance check in the text. A PLAN.md is
++  still what survives a context reset, so write both when the task will outlive the session.
++- Step 4's fresh pass: `subagent_fork` critiques with the conversation in hand; a plain `subagent`
++  reviews with no memory of your reasoning. Either returns only the critique, so ask for the three
++  answers explicitly.
++- A review call that returns nothing — no critique and no error — is a failed step, not a pass.
++  Re-run it once; if it is still empty, do the three answers yourself and write in the plan that
++  you did. Never report the critique as done because the call was dispatched.
++- A plan that must survive automatic continuation rounds: `create_goal` with the one-sentence goal from
++  step 1, then `update_goal` as steps land. The goal keeps the run going; the file keeps the detail.
++- Acceptance checks are `bash` commands. Keep each command string identical between the plan and the
++  proof, so "passed" means the same thing when you report it.
+diff --git a/skills/ds-pr/SKILL.md b/skills/ds-pr/SKILL.md
+index 41a57e4..a068164 100644
+--- a/skills/ds-pr/SKILL.md
++++ b/skills/ds-pr/SKILL.md
+@@ -1,8 +1,10 @@
+ ---
+ name: ds-pr
+-description: "Files a short, clear pull request for the current branch. Use when the user asks to open, file or create a PR, or says /ds-pr."
++description: "File a short pull request for the current branch with a title and body a busy reviewer reads in ten seconds. Use when asked to open, file or create a PR."
+ ---
+ 
++# ds-pr
++
+ Open one real PR whose title and description a busy reviewer can read in ten seconds.
+ 
+ ## Steps
+@@ -23,10 +25,20 @@ Open one real PR whose title and description a busy reviewer can read in ten sec
+ ## Stop when
+ 
+ - GitHub returned a PR URL. Hand off to `ds-watch-pr` if the user asked for watching.
+-- `gh pr create` fails twice. If the error is a GraphQL rate limit, retry once through REST: `gh api repos/<owner>/<repo>/pulls -f title=... -f head=... -f base=... -F body=@body.md`. If that fails too, report the error.
++- `gh pr create` fails twice. If the error is a GraphQL rate limit, retry once through REST: `gh api repos/<owner>/<repo>/pulls -f title=... -f head=... -f base=... -F body=@pr-body.md`, reading the same file step 5 writes. If that fails too, report the error.
+ 
+ ## Rules
+ 
+ - No file-by-file change lists in the description.
+ - Do not post follow-up comments unless the request needs one. Use `ds-pr-comments` when it does.
+ - Never guess a model name.
++
++## On DeepSeek Harness
++
++- `gh` runs through `bash` (`gh pr list --head <branch>`, `gh pr create`); there is no separate PR tool.
++- Write the description to `pr-body.md` inside the workspace and pass `--body-file pr-body.md`.
++  The REST fallback above reads that same file. Quoting a long body through `bash` mangles it.
++- Filing the PR also pushes the branch, and both can stop on the approval gate. A prompt is
++  neither a pass nor a failure: report what it asked and what you chose.
++- If `gh` is not signed in or the command is refused, say so and stop. Never paste a URL GitHub
++  did not return.
+diff --git a/skills/ds-pr-comments/SKILL.md b/skills/ds-pr-comments/SKILL.md
+index b50031e..e06a5e7 100644
+--- a/skills/ds-pr-comments/SKILL.md
++++ b/skills/ds-pr-comments/SKILL.md
+@@ -1,8 +1,10 @@
+ ---
+ name: ds-pr-comments
+-description: "Formats and posts GitHub comments written by an agent on the user's behalf, with clear attribution and no leaked secrets. Use whenever you post a PR comment, review reply or dismissal reason, or on /ds-pr-comments."
++description: "Post attributed, secret-free GitHub comments on the user's behalf with a clear agent note on top. Use whenever you write a PR comment, review reply or dismissal reason."
+ ---
+ 
++# ds-pr-comments
++
+ Make every agent-written comment easy to spot, short and safe to publish.
+ 
+ ## Steps
+@@ -36,3 +38,12 @@ Make every agent-written comment easy to spot, short and safe to publish.
+ - One attribution only. No signature, footer, heading or horizontal rule.
+ - No thanks, filler or status updates such as "still working on it".
+ - Never guess the model name.
++
++## On DeepSeek Harness
++
++- Posting is `gh` through `bash` (`gh pr comment <n> --body-file <path>`, or `gh api` for an inline
++  reply). Write the body file inside the workspace so the exact text you scanned is the text you send.
++- In the note, the harness name is DeepSeek Harness. Use the model the session reports, and name
++  only the harness when it reports none. Never guess.
++- Step 3's scan is a `bash` pass over the file you are about to post. A scan you did not run is not
++  a scan.
+diff --git a/skills/ds-principles/SKILL.md b/skills/ds-principles/SKILL.md
+index 4854a3a..b01b468 100644
+--- a/skills/ds-principles/SKILL.md
++++ b/skills/ds-principles/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-principles
+-description: "Compact engineering principles for design, debugging, verification, and delegation, each with a trigger. Use when choosing structure or types, sizing a diff, debugging, writing tests, or when the user types /ds-principles."
++description: "Apply compact engineering principles with triggers for design, debugging, verification and delegation. Use when choosing types or structure, sizing a diff, debugging, or writing tests."
+ ---
+ 
+ # Engineering principles
+diff --git a/skills/ds-ready/SKILL.md b/skills/ds-ready/SKILL.md
+index 019e4e6..973b238 100644
+--- a/skills/ds-ready/SKILL.md
++++ b/skills/ds-ready/SKILL.md
+@@ -1,8 +1,10 @@
+ ---
+ name: ds-ready
+-description: "Runs the full ds-ship workflow but stops with the pull request ready for a human to merge, and never merges. Use when the user says get it ready, make it mergeable, stop before merge, or /ds-ready."
++description: "Bring a change to an open PR that passes the merge gate and stop: never merge. Use for 'get it ready', 'make it mergeable' or 'stop before merge'."
+ ---
+ 
++# ds-ready
++
+ Do all of `ds-ship` except the merge. Hand the user an open PR that passes the merge gate.
+ 
+ The request grants the same test permission as `ds-ship`, and you may commit, push, rebase and `--force-with-lease` this task's branch. You may not merge.
+@@ -30,3 +32,12 @@ The request grants the same test permission as `ds-ship`, and you may commit, pu
+ - Never merge, turn on auto-merge, join a merge queue or push to the default branch.
+ - Do not ask another agent to do any of those things for you.
+ - Show evidence for the verdict: the check list and mergeable state you read.
++
++## On DeepSeek Harness
++
++- Steps 1 to 6 are `ds-ship`'s, and that skill's harness binding covers `gh` through `bash`, the
++  watcher job and the approval gates. Nothing there authorizes the merge.
++- Step 4's live read is one `bash` call: `gh pr view <pr> --json reviewDecision,mergeStateStatus,statusCheckRollup`
++  plus `git fetch`. A status you did not read is not a verdict.
++- Push and `--force-with-lease` can stop on the approval gate. A prompt is not a push, so it
++  belongs in the verdict, not in the proof.
+diff --git a/skills/ds-review-loop/SKILL.md b/skills/ds-review-loop/SKILL.md
+index d0811f7..9b15786 100644
+--- a/skills/ds-review-loop/SKILL.md
++++ b/skills/ds-review-loop/SKILL.md
+@@ -1,8 +1,10 @@
+ ---
+ name: ds-review-loop
+-description: "Runs an author and a fresh-context reviewer in a loop on the current change until both agree it is correct, for at most four rounds. Use before or after filing a PR, when the user says review loop, get it reviewed, or /ds-review-loop."
++description: "Loop an author and a fresh-context reviewer on the current diff until both agree, max four rounds. Use for 'get it reviewed' before a PR, not a standards/spec audit — that is code-review."
+ ---
+ 
++# ds-review-loop
++
+ Make a change more correct by letting one fresh reviewer push back until you both agree.
+ 
+ ## Steps
+@@ -40,3 +42,14 @@ Make a change more correct by letting one fresh reviewer push back until you bot
+ - Do not push during the loop. Push afterward only if the user asked to push or ship.
+ - If you update a PR, add: `Reviewed with ds-review-loop: <N> rounds, <reviewer>, verdict <verdict>.`
+ - Report rounds, reviewer, fixed and declined findings with reasons, and diff size before and after.
++
++## On DeepSeek Harness
++
++- Step 3's fresh-context reviewer: `subagent` when you want it blind to your reasoning, `subagent_fork`
++  when you want it to have the diff's history. Both return only the report, so put the brief in the call.
++- One reviewer at a time means one call per round; do not send round N+1 in the same message. Parallel
++  reviewers are ds-jury, not this loop.
++- `git status --short`, `git merge-base` and `git diff` are ordinary `bash` calls. Keep the one diff
++  command from step 1 byte-identical across rounds, or "the diff grew" is not measurable.
++- A subagent that errors or returns nothing is not an APPROVE (step 5). Re-ask once with the brief plus
++  the ledger, then record the gap and report it.
+diff --git a/skills/ds-revive/SKILL.md b/skills/ds-revive/SKILL.md
+index 50dc46e..3ce3368 100644
+--- a/skills/ds-revive/SKILL.md
++++ b/skills/ds-revive/SKILL.md
+@@ -1,8 +1,10 @@
+ ---
+ name: ds-revive
+-description: "Brings an old PR up to date by checking if its idea still fits the current code, then rebasing, reworking or recommending it be closed. Use when asked to rebase, refresh, update or revive a stale PR, or /ds-revive."
++description: "Bring a stale PR up to date: check the idea still fits, then rebase, rework or recommend closing it. Use for 'rebase this', 'refresh' or 'revive an old PR'."
+ ---
+ 
++# ds-revive
++
+ Update the idea, not only the branch. A clean rebase does not prove the PR still belongs.
+ 
+ ## Steps
+@@ -40,3 +42,14 @@ Update the idea, not only the branch. A clean rebase does not prove the PR still
+ - No conflicts in Git does not mean the PR is current.
+ - Separate facts you checked from your judgment.
+ - Post PR comments only when asked, through `ds-pr-comments`.
++
++## On DeepSeek Harness
++
++- Steps 1 to 4 read state through `bash`: `git fetch`, `gh pr view <pr>`, `gh pr diff`,
++  `git range-diff`, `gh pr list --search`.
++- The step 7 worktree goes inside the session workspace. Writes outside it fail closed, so a
++  worktree under a temp directory outside the workspace will not work.
++- The step 10 lease push can stop on the approval gate, and a prompt is not a failed lease. Report
++  the gate and the lease failure as separate facts.
++- Step 9's checks are `bash` runs; label each failure real, pre-existing or infrastructure from
++  the output, not from the branch name.
+diff --git a/skills/ds-sharpen/SKILL.md b/skills/ds-sharpen/SKILL.md
+index a0eb302..4b6d6c3 100644
+--- a/skills/ds-sharpen/SKILL.md
++++ b/skills/ds-sharpen/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-sharpen
+-description: "Restate the user's goal, make the task deeper rather than bigger, rewrite the prompt, and optionally attack the plan to find weak spots. Use before starting vague or high-stakes work, for 'sharpen this', 'what am I really asking', 'stress test this plan', or /ds-sharpen."
++description: "Sharpen a vague or high-stakes request: restate the goal, rewrite the prompt, and optionally stress-test the plan. Use for 'sharpen this', 'what am I really asking' or 'stress test this plan'."
+ ---
+ 
+ # ds-sharpen
+@@ -29,3 +29,12 @@ A sharper prompt saves more tokens than any loop. Fix the ask before doing the w
+ - Deeper, not bigger. Do not add features.
+ - Do not apply fixes from the stress test. Report them.
+ - A finding without output is an opinion. Leave it out.
++
++## On DeepSeek Harness
++
++- Step 4's stress test is two or three `subagent` calls in one assistant message, each given the
++  plan and the goal; they run concurrently and return reports, not edits.
++- Step 1's "ask one question" is `ask_user_question` with 2-4 options — a plain message is not a
++  question the harness blocks on.
++- A finding needs a run: the probe is a `bash` command whose output you paste. A finding without
++  one is an opinion and gets dropped, as the rules say.
+diff --git a/skills/ds-ship/SKILL.md b/skills/ds-ship/SKILL.md
+index f645732..711b33c 100644
+--- a/skills/ds-ship/SKILL.md
++++ b/skills/ds-ship/SKILL.md
+@@ -1,8 +1,10 @@
+ ---
+ name: ds-ship
+-description: "Takes a change all the way from code to a merged pull request without supervision: build it, prove it, review it, file the PR, watch it and merge it. Use when the user says ship it, send it all the way, merge when green, or /ds-ship."
++description: "Take a change from code to a merged PR unsupervised: prove it, review it, file it, watch it, merge on a green gate. Use for 'ship it' or 'merge when green'."
+ ---
+ 
++# ds-ship
++
+ Own the work from its current state to a merged PR while nobody is watching.
+ 
+ Only act this way when the user clearly asked for it. The request grants three things: run the tests and app checks the proof needs without asking first, force-push this task's own branch with `--force-with-lease`, and merge once the gate below passes. It grants nothing else.
+@@ -34,3 +36,17 @@ Merge gate, all true on the latest head: proof covers the full diff, required ch
+ - If no question tool exists or nobody answers, leave the PR open and unmerged, and start your final message with the question.
+ - Evidence is output you saw in this session. A claim without output is not proof.
+ - Keep scope fixed. Decline extra work from reviews and list it as follow-ups.
++
++## On DeepSeek Harness
++
++- This is the unattended run: `create_goal` at the start so the work survives compaction, and
++  `update_goal` as the gate items close.
++- "Do not end your turn while checks are pending" is `job_output({ job_id, wait: true })` on the
++  watcher's background job. Never `sleep`, never a polling loop.
++- "Ask with the harness question tool" is `ask_user_question` with options, carrying the PR link,
++  the blocker and your recommendation. No answer: leave the PR open and lead the final message
++  with the question.
++- Push, force-push and merge can stop on the approval gate. A prompt is not a green gate: report
++  what it asked and what you chose, and do not retry it in a loop.
++- Evidence is `bash` output from this session, `gh pr checks` included, pasted rather than
++  remembered.
+diff --git a/skills/ds-swarm/SKILL.md b/skills/ds-swarm/SKILL.md
+index 6b26df0..a75a844 100644
+--- a/skills/ds-swarm/SKILL.md
++++ b/skills/ds-swarm/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-swarm
+-description: "Fan out N parallel workers on slices of a job or on a race, collect every result, and return one evidence-backed report. Use for wide coverage, audits, races between approaches or exploration, or for /ds-swarm, 'swarm this', 'split this across workers'."
++description: "Fan out N parallel subagents on slices of a job or a race, collect every result, then one evidence-backed report. Use for wide coverage or 'swarm this'; Orca worktrees: orchestration."
+ ---
+ 
+ # ds-swarm
+@@ -29,3 +29,14 @@ Split work that is wide but shallow across parallel workers, then merge their pr
+ - Workers do not share writable state.
+ - A missing slice is never counted as passing.
+ - Report what workers proved, not what they claimed.
++
++## On DeepSeek Harness
++
++- Step 5 is N `subagent` calls in ONE assistant message. Only calls in the same message run in parallel;
++  one message per worker runs them as a queue.
++- Below about eight slices, hand-written `subagent` calls are easier to audit. Past that, switch to
++  `workflow`: a JS script that fans out subagents with phases and structured results.
++- Workers write inside the workspace only (writes outside it fail closed): one `slices/<name>/` per
++  worker that writes, never a shared file (step 4).
++- A swarm that must survive turns and stay inspectable is Agent Teams: `spawn_teammate` per slice plus
++  `team_task_*` tasks. Subagents return a report and vanish; teammates persist.
+diff --git a/skills/ds-tdd/SKILL.md b/skills/ds-tdd/SKILL.md
+index d8a056f..2a177a0 100644
+--- a/skills/ds-tdd/SKILL.md
++++ b/skills/ds-tdd/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-tdd
+-description: "Fix a bug by first writing a focused test that fails for the right reason, then making the smallest change that makes it pass. Use when the user asks for TDD or a regression test, when a bug has a cheap local test target, or for /ds-tdd."
++description: "Fix a bug test-first: write the smallest test that fails for the right reason, then the smallest change that passes it. Use for TDD, regression tests, or a cheap local repro."
+ ---
+ 
+ # ds-tdd
+@@ -26,4 +26,11 @@ Make the bug executable before touching production code, so the fix is proven, n
+ 
+ - Never edit a test to match a wrong implementation.
+ - Do not weaken existing assertions without a clear, stated reason.
+-- No test beats a bad test: one that mostly tests mocks, depends on timing, or would be deleted right after.
++- A bad test is worse than no test: one that mostly tests mocks, depends on timing, or would be deleted right after.
++
++## On DeepSeek Harness
++
++- Steps 4 and 6 are the same `bash` command, unchanged, so the before and after output is real.
++- A slow suite: `bash({ run_in_background: true })`, then `job_output({ job_id, wait: true })`. No
++  `sleep` polling, and no re-running it to see whether it finished.
++- Fixtures and scratch files go inside the session workspace; writes outside it fail closed.
+diff --git a/skills/ds-unslop/SKILL.md b/skills/ds-unslop/SKILL.md
+index dba77f2..3037e43 100644
+--- a/skills/ds-unslop/SKILL.md
++++ b/skills/ds-unslop/SKILL.md
+@@ -1,9 +1,9 @@
+ ---
+ name: ds-unslop
+-description: "Remove AI writing tells from prose and code comments, then rewrite in plain, specific English. Use when writing or editing replies, docs, READMEs, PR descriptions, commit messages, or comments, or when the user types /ds-unslop."
++description: "Strip AI writing tells from prose and code comments, then rewrite in plain, specific English. Use when drafting replies, docs, READMEs, PR bodies, commits or comments."
+ ---
+ 
+-# Unslop
++# ds-unslop
+ 
+ Write clean as you draft. Then scan for these tells and rewrite. Keep the meaning and tone.
+ 
+diff --git a/skills/ds-unstick/SKILL.md b/skills/ds-unstick/SKILL.md
+index 6e6e1e7..daf3288 100644
+--- a/skills/ds-unstick/SKILL.md
++++ b/skills/ds-unstick/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-unstick
+-description: "Break out of a repeating failure: name the assumption behind all the failed fixes, test it directly, list three other approaches, pick one, and restart clean if needed. Use when the same error or wrong behavior comes back after two fix attempts, or when you notice you are retrying small variations. Invoke as /ds-unstick."
++description: "Break a repeating failure: name the assumption behind every failed fix, test it directly, list three other approaches, pick one, restart clean. Use when the same error survives two fixes."
+ ---
+ 
+ # ds-unstick
+@@ -31,3 +31,14 @@ When two fixes fail the same way, the problem is usually a wrong belief, not a w
+ - Evidence beats reasoning. If a probe takes a minute, run it.
+ - Keep the failed-attempt list, because it is the most useful part of the report.
+ - Use a clean state before a new approach, so that old edits cannot hide the result.
++
++## On DeepSeek Harness
++
++- Step 4's probe is a `bash` one-liner with a yes-or-no answer: a print, a log line, `which`,
++  `--version`, or a grep for the real call site. Keep the command string stable and paste its output.
++- A probe that takes minutes: `bash({ run_in_background: true })`, then `job_output({ job_id, wait: true })`.
++  Do not sleep on it, and do not re-run it to see if it finished.
++- Step 8's clean state is plain `bash` git — `git stash` or `git checkout -- <files>` — then apply only
++  the chosen approach.
++- Two rounds failed and you need direction: `ask_user_question` with the attempt list, the tested
++  assumptions and the probe output attached. A prose "what should I do" gets a worse answer.
+diff --git a/skills/ds-verify-loop/SKILL.md b/skills/ds-verify-loop/SKILL.md
+index c5cbe05..c11c2e0 100644
+--- a/skills/ds-verify-loop/SKILL.md
++++ b/skills/ds-verify-loop/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: ds-verify-loop
+-description: "Run edit, real check, read the actual error, fix the root cause, rerun, until the check passes or the cap is hit. Use when you change code that has tests, a type checker, a build, or a runnable app, or before you claim any fix works. Invoke as /ds-verify-loop."
++description: "Edit, run the real check, read the actual error, fix the root cause, rerun until it passes or the cap hits. Use before claiming a fix works, or when the change has a test, typecheck, build or app."
+ ---
+ 
+ # ds-verify-loop
+@@ -32,3 +32,12 @@ Prove a change works by running the real check and fixing what it reports, not w
+ - Run the real command every time. Do not reason about what it would print.
+ - Change one thing per iteration so that you know what fixed it.
+ - If no check exists, write the smallest one that fails without your change, then use the loop.
++
++## On DeepSeek Harness
++
++- The check is a `bash` command. Keep the command string stable between iterations so the
++  before/after comparison is real.
++- A slow suite: `bash({ run_in_background: true })`, then `job_output({ job_id, wait: true })`.
++  Do not busy-poll it and do not re-run it to see if it finished.
++- Approval-gated commands (push, install, destructive shell) can stop on a prompt. A prompt is
++  not a passing check — say what it asked and what you chose.
+diff --git a/skills/ds-watch-pr/SKILL.md b/skills/ds-watch-pr/SKILL.md
+index b800e30..be353c5 100644
+--- a/skills/ds-watch-pr/SKILL.md
++++ b/skills/ds-watch-pr/SKILL.md
+@@ -1,8 +1,10 @@
+ ---
+ name: ds-watch-pr
+-description: "Watches a pull request through CI and review, fixes real findings and stops when it is ready, merged or blocked. Use when the user asks to watch, monitor or babysit a PR, or /ds-watch-pr."
++description: "Watch a PR through CI and review, fix real findings, and stop when it is ready, merged or blocked. Use to watch, monitor or babysit a PR, or when checks are pending."
+ ---
+ 
++# ds-watch-pr
++
+ Keep one PR moving until it is green and reviewed, with as little noise as possible.
+ 
+ The watcher is `scripts/watch_pr.py` in this skill's folder. Call it by absolute path. It needs `python3` and a logged-in `gh`.
+@@ -37,3 +39,14 @@ It prints one line per new check failure, finished check run, comment or review,
+ - When an event needs no action, say nothing. No "still waiting" messages.
+ - Merge only if the user asked for it. Otherwise report ready.
+ - Keep the PR small. Prefer fixes that delete or narrow code.
++
++## On DeepSeek Harness
++
++- Step 2 is `bash({ command: "python3 <abs path>/scripts/watch_pr.py <pr>", run_in_background: true })`.
++  Keep the returned `job_id`; one watcher means one job.
++- Each event is `job_output({ job_id, wait: true })`. Never `sleep`, never a second watcher, and
++  never re-run the script to see whether it finished.
++- Exit 1 means act: fix, `git push`, then kill the job and start a fresh watcher on the new head.
++- `git push` and `--force-with-lease` can stop on the approval gate. A prompt is not a push:
++  report what it asked and what you chose before you count the cycle.
++- The rate-limit stop condition is a `bash` `gh api rate_limit` read: wait the reset once, then stop.

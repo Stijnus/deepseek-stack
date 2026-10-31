@@ -1,6 +1,6 @@
 ---
 name: ds-lessons
-description: "Find mistakes agents keep repeating in this repo and turn each into structure that blocks it, preferring types over lint over tests over docs, plus an end-of-session reflection. Use after a user correction, when the same fix comes up twice, at the end of a long session, or for /ds-lessons."
+description: "Turn repeated agent mistakes in this repo into structure, types, checks or rules, plus an end-of-session reflection. Use after a correction or when the same fix comes up twice."
 ---
 
 # ds-lessons
@@ -30,3 +30,12 @@ An instruction an agent can skip is a wish. Make repeated mistakes fail loudly i
 
 - If the fix is structural, do not also add prose. The prose was the symptom.
 - Report each class with evidence, the level chosen, and why a higher level did not work.
+
+## On DeepSeek Harness
+
+- Step 4's proof is a `bash` run: paste the check failing with the mistake re-introduced, then the
+  same check passing with it removed.
+- Write the step 6 reflection to `PROGRESS.md`. A chat-only note is gone after a context reset, and
+  `create_goal`/`update_goal` keeps the rule work alive across automatic rounds.
+- A rule meant to outlive the session goes into the repo's agent instruction file in the same
+  change. Nothing in the harness enforces a rule that lives only in a message.

@@ -1,6 +1,6 @@
 ---
 name: ds-blast-radius
-description: "Find what a change could break outside its own diff, then prove the key safety fact by running real code. Use before shipping a risky or untrusted change, for 'what could this break', 'blast radius of X', or /ds-blast-radius."
+description: "Find what a change could break outside its own diff, then prove each key safety fact by running real code. Use for 'what could this break' or before shipping a risky change."
 ---
 
 # ds-blast-radius
@@ -30,3 +30,11 @@ Listing callers is easy. The job is finding the breakage that a text search will
 
 - A convincing write-up is not proof. Show output.
 - Do not fix anything here. Hand fixes to the normal flow.
+
+## On DeepSeek Harness
+
+- Level 4 is one `bash` script calling the exact function. Paste the command and its output.
+- Independent probes: separate `bash({ run_in_background: true })` jobs started in one message,
+  each collected with `job_output({ job_id, wait: true })`.
+- Level 5 stays a real app run. No harness tool substitutes for it, so state plainly when you
+  stopped at level 4 and why.

@@ -1,6 +1,6 @@
 ---
 name: ds-catchup
-description: "Give the user a short plain-language catch-up on what changed since their last message, followed by every decision still waiting on them. Use when the user returns after a long or unattended run, asks 'where are we', 'what did I miss', or types /ds-catchup."
+description: "Give a short plain-language catch-up on what changed since the user's last message, then every decision still waiting on them. Use after a long run or 'where are we'."
 ---
 
 # ds-catchup
@@ -26,3 +26,12 @@ Bring the user back up to speed in a minute, and hand them every call only they 
 - Work you can still do yourself is not a decision for the user.
 - Name things the way the user would, not by internal labels.
 - Short sentences, no jargon.
+
+## On DeepSeek Harness
+
+- Step 3's fresh state is `bash` output: `git status`, `git log --oneline`, `gh pr view`, the test
+  command. A number you remember is not a number you checked.
+- Background work still running: `job_output({ job_id })` reads what it produced. A job you never
+  collected is work you cannot report.
+- A decision that is a real choice is `ask_user_question` with options, so the user answers once.
+  The catch-up text still lists every one of them.

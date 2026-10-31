@@ -1,6 +1,6 @@
 ---
 name: ds-help
-description: "Pick the right deepseek-stack skill for a task and explain how the pack fits together. Use when the user asks which skill to use, what the pack contains, or types /ds-help."
+description: "Pick the right deepseek-stack skill for a task and say how the pack fits together. Use when unsure which skill applies, when asked what the pack can do, or what to run next."
 ---
 
 # ds-help
@@ -41,3 +41,12 @@ Match the task to one skill, say why in one line, then run it.
 
 - Recommend one skill. Name a second only if the task clearly has two phases.
 - If no skill fits, say so and work with ds-mode alone.
+
+## On DeepSeek Harness
+
+- Load a skill with `skill({ name })` before following it. The catalog carries one-line
+  summaries only; the instructions live in the file.
+- If the user already typed `/ds-plan-loop`, that body is injected into the step — follow it
+  directly instead of loading it a second time.
+- `ds-mode` is the always-on layer; recommend an extra skill only when the task matches one.
+- Loading re-reads the file, so a re-run after an edit picks up the new text with no restart.

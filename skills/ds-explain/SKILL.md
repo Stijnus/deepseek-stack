@@ -1,6 +1,6 @@
 ---
 name: ds-explain
-description: "Explain how a piece of code works, why it is built that way, and what that means, in plain language a person can follow. Use for 'how does X work', 'why is it like this', 'teach me this', onboarding to a subsystem, or /ds-explain."
+description: "Explain how code works and why it has its current shape, in plain language with cited files and lines. Use for 'how does X work', 'why is it like this' or onboarding."
 ---
 
 # ds-explain

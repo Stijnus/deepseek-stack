@@ -1,7 +1,9 @@
 ---
 name: ds-design-audit
-description: "Reviews an existing UI with scores based on evidence, then fixes the highest-impact problems. Use when a page or app screen looks generic, cluttered, or unfinished, or before you ship UI work. Run as /ds-design-audit."
+description: "Score an existing UI 1-5 from screenshots, fix the worst problems, re-score. Use when a page looks generic or unfinished; for a WCAG or guideline audit use accessibility or web-design-guidelines."
 ---
+
+# ds-design-audit
 
 Score a UI from what is on the screen, fix the worst problems, and show that the fixes work.
 
@@ -35,3 +37,13 @@ Score a UI from what is on the screen, fix the worst problems, and show that the
 - Do not change factual copy, prices, claims, or feature behavior without asking.
 - If the brief requires a style that this skill would flag, it is not a fault.
 - If the UI needs a full rebuild, recommend /ds-design. Do not rebuild it in this skill.
+
+## On DeepSeek Harness
+
+- `moodboard({ action: "active" })` first. It defines what on-brand means for the typography,
+  color, spacing and radius scores, so a deliberate choice in the references is not marked down
+  as a fault.
+- Step 1's render: start the app or dev server with `bash({ run_in_background: true })` and keep
+  the job id; the step 2 screenshots are `bash` runs against that job.
+- Step 7's "without asking" on copy, prices and claims: `ask_user_question`, so the answer is
+  recorded instead of assumed.

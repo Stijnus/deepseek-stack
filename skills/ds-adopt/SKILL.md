@@ -1,7 +1,9 @@
 ---
 name: ds-adopt
-description: "Takes over an existing PR, branch or agent thread and finishes its original goal while keeping credit for the first contributors. Use when the user says take over, adopt, pick up or finish this PR, or /ds-adopt."
+description: "Take over someone else's PR, branch or agent thread, finish its original goal and keep their credit. Use for 'take over', 'adopt' or 'finish this PR'."
 ---
+
+# ds-adopt
 
 Finish someone else's work as if it were yours, but credit them for what they did.
 
@@ -31,3 +33,14 @@ Finish someone else's work as if it were yours, but credit them for what they di
 - Do not defend the old code because it exists. Do not add unrelated features.
 - Do not edit, merge or close the original PR without permission.
 - State plainly what you could not verify.
+
+## On DeepSeek Harness
+
+- Step 1 and step 8 are `gh` through `bash` (`gh pr view`, `gh pr diff`, `gh pr checks`). The handoff
+  notes are hints; the API is the current state.
+- A takeover that runs unattended: `create_goal` at the start and `update_goal` at each
+  milestone, with `PROGRESS.md` carrying what the goal record cannot.
+- Step 7's verification is `bash` output, command by command. A claim without one is not the check
+  step 7 asks for.
+- Filing and watching stay `ds-pr` and `ds-watch-pr`. Their DSH sections own the push gate and the
+  watcher job, so this skill adds nothing there.

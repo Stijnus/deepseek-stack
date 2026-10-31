@@ -1,6 +1,6 @@
 ---
 name: ds-plan-loop
-description: "Write a numbered plan with an acceptance check for each step, critique it once in a fresh pass, revise it, then execute one step at a time. Use when a task touches more than one file, has unclear scope, or failed before because steps were missed. Invoke as /ds-plan-loop."
+description: "Plan in numbered steps, each with an acceptance check, critique the plan once in a fresh pass, then build one step at a time. Use when a task spans several files or scope is unclear."
 ---
 
 # ds-plan-loop
@@ -33,3 +33,18 @@ Plan before coding, check the plan once, then build the task one verified step a
 - Do one step per diff. Do not batch steps to save time.
 - Do not add steps that the goal does not need.
 - Keep the plan short: about 3-10 steps. Split bigger work into separate plans.
+
+## On DeepSeek Harness
+
+- The plan in step 2 is `todo_write`: one todo per step, the acceptance check in the text. A PLAN.md is
+  still what survives a context reset, so write both when the task will outlive the session.
+- Step 4's fresh pass: `subagent_fork` critiques with the conversation in hand; a plain `subagent`
+  reviews with no memory of your reasoning. Either returns only the critique, so ask for the three
+  answers explicitly.
+- A review call that returns nothing — no critique and no error — is a failed step, not a pass.
+  Re-run it once; if it is still empty, do the three answers yourself and write in the plan that
+  you did. Never report the critique as done because the call was dispatched.
+- A plan that must survive automatic continuation rounds: `create_goal` with the one-sentence goal from
+  step 1, then `update_goal` as steps land. The goal keeps the run going; the file keeps the detail.
+- Acceptance checks are `bash` commands. Keep each command string identical between the plan and the
+  proof, so "passed" means the same thing when you report it.

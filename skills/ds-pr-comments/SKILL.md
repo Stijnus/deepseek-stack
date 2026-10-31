@@ -1,7 +1,9 @@
 ---
 name: ds-pr-comments
-description: "Formats and posts GitHub comments written by an agent on the user's behalf, with clear attribution and no leaked secrets. Use whenever you post a PR comment, review reply or dismissal reason, or on /ds-pr-comments."
+description: "Post attributed, secret-free GitHub comments on the user's behalf with a clear agent note on top. Use whenever you write a PR comment, review reply or dismissal reason."
 ---
+
+# ds-pr-comments
 
 Make every agent-written comment easy to spot, short and safe to publish.
 
@@ -36,3 +38,12 @@ Make every agent-written comment easy to spot, short and safe to publish.
 - One attribution only. No signature, footer, heading or horizontal rule.
 - No thanks, filler or status updates such as "still working on it".
 - Never guess the model name.
+
+## On DeepSeek Harness
+
+- Posting is `gh` through `bash` (`gh pr comment <n> --body-file <path>`, or `gh api` for an inline
+  reply). Write the body file inside the workspace so the exact text you scanned is the text you send.
+- In the note, the harness name is DeepSeek Harness. Use the model the session reports, and name
+  only the harness when it reports none. Never guess.
+- Step 3's scan is a `bash` pass over the file you are about to post. A scan you did not run is not
+  a scan.

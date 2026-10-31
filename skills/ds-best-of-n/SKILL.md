@@ -1,6 +1,6 @@
 ---
 name: ds-best-of-n
-description: "Run N independent attempts at the same task in parallel, pick the strongest as the base, and graft the best parts of the others into it. Use when one attempt at a non-trivial artifact could land on the wrong shape, or for /ds-best-of-n, 'try a few versions', 'best of 3'."
+description: "Run N independent attempts at the same task in parallel, pick the strongest as the base, graft the best parts of the others in. Use when one try could land on the wrong shape, or for best of 3."
 ---
 
 # ds-best-of-n
@@ -27,3 +27,14 @@ One attempt is a sample, not an answer. DeepSeek is cheap enough that three to f
 - Never pick by reading the attempt's own summary. Pick by running it.
 - Do not let one attempt see another before scoring.
 - Keep the losing attempts until the final checks pass.
+
+## On DeepSeek Harness
+
+- Step 3 is N `subagent` calls in ONE assistant message: same prompt, different output path. Separate
+  messages serialize the attempts and lose the independent-sample property.
+- Output locations live inside the workspace (writes outside it fail closed): `attempts/1/`, not
+  `/tmp/attempts/1/`. A git worktree also works.
+- Step 4's check is `bash` inside each attempt's directory and read its real output. The attempt's own
+  summary is never the score.
+- N stays small (3-5). `workflow` is built for dozens of slices, not five; hand-written `subagent` calls
+  are easier to audit at this size.

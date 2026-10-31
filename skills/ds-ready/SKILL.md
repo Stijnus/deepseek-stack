@@ -1,7 +1,9 @@
 ---
 name: ds-ready
-description: "Runs the full ds-ship workflow but stops with the pull request ready for a human to merge, and never merges. Use when the user says get it ready, make it mergeable, stop before merge, or /ds-ready."
+description: "Bring a change to an open PR that passes the merge gate and stop: never merge. Use for 'get it ready', 'make it mergeable' or 'stop before merge'."
 ---
+
+# ds-ready
 
 Do all of `ds-ship` except the merge. Hand the user an open PR that passes the merge gate.
 
@@ -30,3 +32,12 @@ The request grants the same test permission as `ds-ship`, and you may commit, pu
 - Never merge, turn on auto-merge, join a merge queue or push to the default branch.
 - Do not ask another agent to do any of those things for you.
 - Show evidence for the verdict: the check list and mergeable state you read.
+
+## On DeepSeek Harness
+
+- Steps 1 to 6 are `ds-ship`'s, and that skill's harness binding covers `gh` through `bash`, the
+  watcher job and the approval gates. Nothing there authorizes the merge.
+- Step 4's live read is one `bash` call: `gh pr view <pr> --json reviewDecision,mergeStateStatus,statusCheckRollup`
+  plus `git fetch`. A status you did not read is not a verdict.
+- Push and `--force-with-lease` can stop on the approval gate. A prompt is not a push, so it
+  belongs in the verdict, not in the proof.

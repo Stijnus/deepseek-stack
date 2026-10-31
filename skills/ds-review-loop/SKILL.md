@@ -1,7 +1,9 @@
 ---
 name: ds-review-loop
-description: "Runs an author and a fresh-context reviewer in a loop on the current change until both agree it is correct, for at most four rounds. Use before or after filing a PR, when the user says review loop, get it reviewed, or /ds-review-loop."
+description: "Loop an author and a fresh-context reviewer on the current diff until both agree, max four rounds. Use for 'get it reviewed' before a PR, not a standards/spec audit — that is code-review."
 ---
+
+# ds-review-loop
 
 Make a change more correct by letting one fresh reviewer push back until you both agree.
 
@@ -40,3 +42,14 @@ Make a change more correct by letting one fresh reviewer push back until you bot
 - Do not push during the loop. Push afterward only if the user asked to push or ship.
 - If you update a PR, add: `Reviewed with ds-review-loop: <N> rounds, <reviewer>, verdict <verdict>.`
 - Report rounds, reviewer, fixed and declined findings with reasons, and diff size before and after.
+
+## On DeepSeek Harness
+
+- Step 3's fresh-context reviewer: `subagent` when you want it blind to your reasoning, `subagent_fork`
+  when you want it to have the diff's history. Both return only the report, so put the brief in the call.
+- One reviewer at a time means one call per round; do not send round N+1 in the same message. Parallel
+  reviewers are ds-jury, not this loop.
+- `git status --short`, `git merge-base` and `git diff` are ordinary `bash` calls. Keep the one diff
+  command from step 1 byte-identical across rounds, or "the diff grew" is not measurable.
+- A subagent that errors or returns nothing is not an APPROVE (step 5). Re-ask once with the brief plus
+  the ledger, then record the gap and report it.

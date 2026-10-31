@@ -1,6 +1,6 @@
 ---
 name: ds-mode
-description: "Always-on working style for DeepSeek agents: restate the task, read before editing, small verified steps, evidence before done, lean context, short reports. Use when starting any coding task, when the user types /ds-mode, or when work starts to drift."
+description: "Run every coding task tight: restate the goal, read before editing, small verified steps, evidence before done. Use when work drifts or a claim outruns its proof."
 ---
 
 # DeepSeek working mode
@@ -27,7 +27,7 @@ Apply this on every task. It keeps the loop tight and the claims honest.
 
 - Read files in the parts you need, not whole when a range will do.
 - Keep summaries in your context, not raw output. Trim long logs to the lines that matter.
-- Send bulk reading, wide searches, and large fan-out to subagents when the harness has them. Ask each for a short conclusion with file paths.
+- Send bulk reading, wide searches and large fan-out to subagents. Ask each for a short conclusion with file paths.
 - Do not reread a file you just edited. Do not repeat a search you already ran.
 
 ## Before you say done
@@ -48,3 +48,12 @@ Apply this on every task. It keeps the loop tight and the claims honest.
 ## Comments in code
 
 Write a comment only to explain a reason the code cannot show. Delete comments that narrate what the next line does.
+
+## On DeepSeek Harness
+
+- The numbered plan in "Before you act" is `todo_write`: one todo per checkable step, updated as you go.
+- Pause points are `ask_user_question` with real options, not a prose ask. Irreversible actions may also
+  stop on a DSH approval prompt — a prompt is not a yes; say what it asked and what you chose.
+- Bulk reading and wide searches: one `subagent` call per slice, all in the same assistant message so
+  they run in parallel. Ask each for a short conclusion with file paths.
+- A slow check is `bash({ run_in_background: true })`, drained with `job_output({ job_id, wait: true })`.

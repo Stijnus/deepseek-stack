@@ -1,6 +1,6 @@
 ---
 name: ds-tdd
-description: "Fix a bug by first writing a focused test that fails for the right reason, then making the smallest change that makes it pass. Use when the user asks for TDD or a regression test, when a bug has a cheap local test target, or for /ds-tdd."
+description: "Fix a bug test-first: write the smallest test that fails for the right reason, then the smallest change that passes it. Use for TDD, regression tests, or a cheap local repro."
 ---
 
 # ds-tdd
@@ -26,4 +26,11 @@ Make the bug executable before touching production code, so the fix is proven, n
 
 - Never edit a test to match a wrong implementation.
 - Do not weaken existing assertions without a clear, stated reason.
-- No test beats a bad test: one that mostly tests mocks, depends on timing, or would be deleted right after.
+- A bad test is worse than no test: one that mostly tests mocks, depends on timing, or would be deleted right after.
+
+## On DeepSeek Harness
+
+- Steps 4 and 6 are the same `bash` command, unchanged, so the before and after output is real.
+- A slow suite: `bash({ run_in_background: true })`, then `job_output({ job_id, wait: true })`. No
+  `sleep` polling, and no re-running it to see whether it finished.
+- Fixtures and scratch files go inside the session workspace; writes outside it fail closed.

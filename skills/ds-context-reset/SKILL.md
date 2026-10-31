@@ -1,6 +1,6 @@
 ---
 name: ds-context-reset
-description: "Keep a PROGRESS.md for long tasks and move to a fresh session or subagent that reads only that file when the context gets long or stale. Use when a task spans many steps or sessions, when the model starts repeating itself, forgets earlier facts, or re-tries old fixes, or when the context window is past about half full. Invoke as /ds-context-reset."
+description: "Keep PROGRESS.md as the state of a long task and hand off to a fresh context that reads only that file. Use when the context is half full, or the model repeats itself or retries old fixes."
 ---
 
 # ds-context-reset
@@ -34,3 +34,12 @@ Store the state of the work in a file, not in the chat, so a fresh context can c
 - Never put secrets or tokens in it.
 - The fresh context reads the file, not the old transcript.
 - Pair with ds-plan-loop for the Next list and with ds-unstick for the failed-approach notes.
+
+## On DeepSeek Harness
+
+- PROGRESS.md alone is not durable: pair it with `create_goal`/`update_goal`. The goal survives automatic
+  continuation rounds; the file survives context resets. A goal without the file loses the evidence.
+- Step 6's fresh context is a `subagent` call, not `subagent_fork` — fork carries the stale history this
+  skill exists to drop. Pass step 6's instruction verbatim and nothing else.
+- Step 7's baseline is a `bash` command in the new workspace path. If it fails, fix that before any edit.
+- Three resets on one Next item: `ask_user_question` with PROGRESS.md as the report, not a summary of it.

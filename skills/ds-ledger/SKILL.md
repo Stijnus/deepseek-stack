@@ -1,6 +1,6 @@
 ---
 name: ds-ledger
-description: "Keep a one-row-per-decision log during long or unattended runs, and re-read it before each step so the run does not drift from its goal. Use for multi-phase or autonomous work, work a human will review later, or /ds-ledger."
+description: "Log one row per decision during long or unattended work and reread the goal row before each step so the run cannot drift. Use for multi-phase or autonomous runs a human reviews later."
 ---
 
 # ds-ledger
@@ -18,7 +18,7 @@ A long run forgets its own reasons. A short written ledger keeps the goal in vie
    - why: the reason in plain words.
    - evidence: a pointer, never prose. A commit hash, `file:line`, a command and its result, or an artifact path.
    - result: the outcome, such as "tests pass", "reverted", "open".
-4. Keep each cell on one line with no tabs.
+4. Keep each cell on one line. The tab is the separator, so a cell must not contain one.
 5. Log reverts and dropped work too, with the reason. Failures are the most useful rows.
 6. At the end, add a summary row and point the user to the file. Commit it only if a reviewer needs it.
 
@@ -32,3 +32,13 @@ A long run forgets its own reasons. A short written ledger keeps the goal in vie
 - Every row needs evidence you can open or rerun. "Looked fine" is not evidence.
 - Write rows the way you would tell a teammate, plain and concrete.
 - Do not rewrite old rows. Append corrections.
+
+## On DeepSeek Harness
+
+- The ledger is a plain TSV: append rows with `bash` (`printf '...\n' >> .ds-ledger.tsv`) so every cell
+  stays one line and no tool reflows it.
+- An unattended run that must outlive a context reset: `create_goal` for the objective plus the ledger
+  file for the reasons. The goal survives continuation rounds; the file survives resets.
+- Evidence pointers for background work are job ids: `bash({ run_in_background: true })` returns one,
+  and the row records it; drain with `job_output({ job_id, wait: true })` before claiming a result.
+- "Three rows with no progress" is a stop for the run, not a nudge: report and end the turn.
