@@ -114,6 +114,36 @@ if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
       rm -f "$tmp/skills/ds-tdd/extra.txt"
       node tools/install.mjs --uninstall --target "$tmp/skills" >/dev/null 2>&1 || bad "clean uninstall failed after removing the extra file"
     fi
+    # An added directory is a change too, not just an added file.
+    if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
+      mkdir -p "$tmp/skills/ds-tdd/extra-dir"
+      if node tools/install.mjs --uninstall --target "$tmp/skills" >/dev/null 2>&1; then
+        bad "uninstall ignored an added directory"
+      elif [[ ! -d "$tmp/skills/ds-tdd" ]]; then
+        bad "removed a skill that gained an added directory"
+      else
+        echo "   added directory keeps the skill"
+      fi
+      rmdir "$tmp/skills/ds-tdd/extra-dir"
+      node tools/install.mjs --uninstall --force --target "$tmp/skills" >/dev/null 2>&1
+    fi
+    # An older v2 manifest (SKILL.md hash only, no fileHashes) must still uninstall cleanly.
+    if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
+      python3 - "$tmp/.ds-stack-manifest.json" <<'PYEOF'
+import json, sys
+p = sys.argv[1]
+m = json.load(open(p))
+for v in m['skills'].values():
+    v.pop('fileHashes', None)
+m['version'] = 2
+open(p, 'w').write(json.dumps(m, indent=2))
+PYEOF
+      if node tools/install.mjs --uninstall --target "$tmp/skills" >/dev/null 2>&1 && [[ -z "$(ls -A "$tmp/skills")" ]]; then
+        echo "   v2-style manifest still uninstalls cleanly"
+      else
+        bad "v2-style manifest uninstall failed or left entries behind"
+      fi
+    fi
 else
   bad "install into a scratch target failed, so the uninstall check could not run"
 fi

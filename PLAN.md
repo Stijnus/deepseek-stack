@@ -316,3 +316,18 @@ Verdict **APPROVE**, four nits, all reproduced by the reviewer and all fixed —
 Process note: the reviewer took ~7 minutes and 18 tool calls, and I twice judged it finished too early —
 once spawning a second reviewer, which ds-review-loop's "one reviewer at a time" rule forbids. Its
 output was discarded; only round 1 counts.
+
+### Round 10 follow-up — review findings adopted late
+
+A second reviewer (spawned by mistake while I misjudged round 1 as finished) reviewed the **pre-fix**
+snapshot and returned CHANGES. One of its findings was stale — the alias-without-hash blocker was
+already fixed in round 1 — but three were new and adopted:
+
+| Finding | Outcome |
+|---|---|
+| a missing recorded file was reported as `file list changed since install`, never naming it | **fixed** — each recorded path is checked first, so the reason reads `"scripts/watch_pr.py" is missing` |
+| `filesUnder` only enumerated regular files, so an added empty directory survived detection | **fixed** — an `entriesUnder` walk compares every entry, allowing only directories that hold recorded files |
+| the v2-manifest fallback had no test | **fixed** — gate 5 now rewrites a manifest to v2 shape and asserts a clean uninstall |
+
+Lesson recorded: two reviewers is not double review, it is a race. `ds-review-loop` says one reviewer
+at a time for a reason, and a verdict on a stale diff is worse than no verdict.
