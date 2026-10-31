@@ -300,3 +300,19 @@ file nobody changes.
 
 `selftest` gate 5 gained a second case: install into a scratch target, edit
 `ds-watch-pr/scripts/watch_pr.py`, and assert uninstall keeps the skill, then that `--force` clears it.
+
+### Review — ds-review-loop, 1 round
+
+Reviewer: a fresh-context DeepSeek subagent (the only model route available; no stronger one).
+Verdict **APPROVE**, four nits, all reproduced by the reviewer and all fixed — none was a goal case.
+
+| Finding | Outcome |
+|---|---|
+| R1 alias entry with no recorded `sha256` was deleted without `--force` | **fixed** — an alias with no recorded hash is now kept and named |
+| R2 `violation()` threw on an odd filesystem (file where a dir belongs, EACCES, dangling symlink), aborting the whole uninstall | **fixed** — `statSync(...).isDirectory()` check plus try/catch that turns a throw into a keep reason (`could not verify`) |
+| R3 gate 5 tested only "recorded file changed", leaving the missing-file and extra-file branches unguarded | **fixed** — gate 5 now also deletes a recorded file and adds an unexpected one, and asserts `--force` clears each |
+| R4 unreachable `!rec` guard | **fixed** — removed |
+
+Process note: the reviewer took ~7 minutes and 18 tool calls, and I twice judged it finished too early —
+once spawning a second reviewer, which ds-review-loop's "one reviewer at a time" rule forbids. Its
+output was discarded; only round 1 counts.

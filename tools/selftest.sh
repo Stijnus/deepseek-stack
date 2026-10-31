@@ -89,6 +89,31 @@ if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
   else
     bad "reinstall for the sub-file check failed"
   fi
+    # A recorded file that disappeared, and an unexpected extra file, must also block removal.
+    if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
+      rm -f "$tmp/skills/ds-watch-pr/scripts/watch_pr.py"
+      if node tools/install.mjs --uninstall --target "$tmp/skills" >/dev/null 2>&1; then
+        bad "uninstall ignored a missing recorded file"
+      elif [[ ! -d "$tmp/skills/ds-watch-pr" ]]; then
+        bad "removed a skill whose recorded file was missing"
+      else
+        echo "   missing recorded file keeps the skill"
+      fi
+      node tools/install.mjs --uninstall --force --target "$tmp/skills" >/dev/null 2>&1 || bad "--force failed after a missing file"
+      [[ ! -d "$tmp/skills/ds-watch-pr" ]] || bad "--force did not remove the skill"
+    fi
+    if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
+      printf 'extra\n' > "$tmp/skills/ds-tdd/extra.txt"
+      if node tools/install.mjs --uninstall --target "$tmp/skills" >/dev/null 2>&1; then
+        bad "uninstall ignored an unexpected extra file"
+      elif [[ ! -d "$tmp/skills/ds-tdd" ]]; then
+        bad "removed a skill that gained an unexpected file"
+      else
+        echo "   unexpected extra file keeps the skill"
+      fi
+      rm -f "$tmp/skills/ds-tdd/extra.txt"
+      node tools/install.mjs --uninstall --target "$tmp/skills" >/dev/null 2>&1 || bad "clean uninstall failed after removing the extra file"
+    fi
 else
   bad "install into a scratch target failed, so the uninstall check could not run"
 fi
