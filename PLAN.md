@@ -111,7 +111,7 @@ Verdicts below are per finding, checked against the code rather than accepted on
 | Finding | Verdict | Action |
 |---|---|---|
 | Reinstall never reconciles removals: delete an alias, reinstall, the old file keeps answering its gesture | **Confirmed** | `install.mjs` now removes manifest-owned entries that no longer exist in the repo, and reports them. Verified: deleting `aliases/ds-audit.md`, rebuilding and re-running `--dry-run` prints `would remove stale /Users/…/ds-audit.md`. Manifest schema also bumped to v2 (it gained `aliases` while still claiming v1). |
-| `build.sh` destroyed `skills/` before the patch dry-run, so a conflicted build left a pristine upstream tree that validates clean and ships silently | **Confirmed, worst of the five** | The build now runs in a temp tree, validates it, and only then swaps `skills/` in. `tools/stamp.mjs` records digests of the patch, `skills/` and `aliases/` on success, and `install.mjs` refuses anything that does not match. Verified: a deliberately corrupt patch aborts with `skills/ was left untouched` and an unchanged digest; a tampered patch makes install refuse. |
+| `build.sh` destroyed `skills/` before the patch dry-run, so a conflicted build left a pristine upstream tree that validates clean and ships silently | **Confirmed, worst of the five** | The build now runs in a temp tree, validates it, and only then swaps `skills/` in. `tools/stamp.mjs` records digests of the patch and `skills/` on success (aliases were later decoupled — see Round 8), and `install.mjs` refuses anything that does not match. Verified: a deliberately corrupt patch aborts with `skills/ was left untouched` and an unchanged digest; a tampered patch makes install refuse. |
 | The installed root was never validated — the dangling-alias FAIL ran only on the source tree | **Confirmed** | Install now byte-compares what landed and runs `validate.mjs <target> --prefix ds-`. `tools/selftest.sh` gate 3 does the same on demand. Installed root: 0 FAIL, 0 WARN. |
 | "Aliases are never rendered" is false: `dsh-client-ui-skill:429` renders non-model-invocable skills in the `/` menu with a `user-only` prefix, so alias descriptions are user-visible UI copy | **Confirmed** | The budget exemption is still right (no model-catalog tokens) but the stated reason was wrong. The comment and the docs now say: excluded from the *model* catalog, still shown in the `/` menu as user-only. |
 | My `tool-skill:945` / `tool-skill:911` / `filesystem-provider:860` citations were "in a package not present" | **Rebutted.** The reviewer searched `.dsh-recon/`. All three packages are in `app.asar`, and re-extracting from the same archive reproduces those exact lines (911, 945, 860). `client-ui-skill:429` itself came from that extraction. Citations stand. | No change. |
@@ -220,3 +220,31 @@ The third case is the point: removing the noise did not weaken the check.
 
 Merged as PR #4, `main` = `21594c4` (2026-10-31). The published clone now runs all six gates with
 no warning noise on a clean tree.
+
+---
+
+## Round 8 — the build stamp stops covering aliases
+
+The stamp was binding three things: the patch, `skills/` and `aliases/`. The first two are build
+output; the third is not. Aliases are hand-written content that `install.mjs` copies straight from
+`aliases/`, so editing one made `install.mjs` refuse until `./tools/build.sh` ran — a rebuild that
+could not even capture the edit, because the patch pipeline only covers `skills/`. The
+clean-checkout fallback had the same flaw: it called any dirty path under `aliases/` suspicious.
+
+Fixed in `tools/stamp.mjs` only. The stamp now records the patch and `skills/`; the fallback checks
+`git status` over `skills/` alone. `digestAliases` is gone. Aliases remain guarded where it makes
+sense: `validate.mjs` still checks six files, unique names, frontmatter and that each target exists,
+and install runs that check before and after copying.
+
+| Case | Result |
+|---|---|
+| alias edited, no stamp (this worktree) | `install.mjs --dry-run` exit 0; `stamp.mjs verify` exit 0 |
+| `SKILL.md` edited, no stamp | `stamp.mjs verify` exit 1 — `skills/ has uncommitted changes` |
+| alias edited, stamp present | `stamp.mjs verify` exit 0; `install.mjs --dry-run` exit 0 |
+| `SKILL.md` edited, stamp present | `stamp.mjs verify` exit 1 — `skills/ changed since the build` |
+| patch edited, stamp present | `stamp.mjs verify` exit 1 — `tools/optimize.patch changed since the build` |
+| stamp written by the old code (extra `aliases` field) | ignored, verifies exit 0 |
+| `./tools/selftest.sh` | `SELFTEST PASSED` |
+
+The skill and patch rows are the point: dropping aliases did not weaken the guard that catches an
+unbuilt or hand-edited `skills/` tree.

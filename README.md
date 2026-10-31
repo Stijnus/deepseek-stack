@@ -121,6 +121,10 @@ Three gates protect an install, each because a real failure once got through: a 
 refuses an unbuilt or hand-edited tree, a build that applies and validates before replacing
 `skills/`, and reconciliation so a deleted skill cannot keep answering its gesture.
 
+The stamp covers `skills/` and `tools/optimize.patch`, not `aliases/`: alias text is content, so
+`node tools/install.mjs` picks up an alias edit without a rebuild. A modified `SKILL.md` still
+fails the stamp until it is captured in the patch.
+
 ## Compatibility
 
 The upstream body text is preserved; DSH-specific guidance is additive and contained in the

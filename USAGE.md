@@ -163,9 +163,11 @@ node tools/install.mjs --uninstall
 
 Four gates protect the install, each because a real failure got through once:
 
-- **Build stamp.** `tools/stamp.mjs` records digests of the patch, `skills/` and `aliases/` after
-  a successful build; `install.mjs` refuses a tree that does not match. A hand edit, a tampered
-  patch or a half-finished build cannot ship.
+- **Build stamp.** `tools/stamp.mjs` records digests of the patch and `skills/` after a successful
+  build; `install.mjs` refuses a tree that does not match. A hand edit, a tampered patch or a
+  half-finished build cannot ship. `aliases/` is deliberately not stamped: aliases are content
+  installed straight from `aliases/`, so editing one needs no rebuild. Install still validates
+  them on their own (six files, unique names, each pointing at an existing skill).
 - **Build before swap.** The patch is applied and validated in a temp tree; `skills/` is replaced
   only afterwards. A conflicted patch leaves the previous good tree alone.
 - **Reconciliation.** A skill or alias deleted from this repo is removed from the install root on
