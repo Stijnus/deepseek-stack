@@ -188,3 +188,32 @@ itself (clean scratch install verifies; an edited file is reported and exits non
 Verified on scratch targets: clean install → `29 skill(s) + 6 alias(es) byte-identical`; editing
 `ds-plan.md` → `differs`; deleting `ds-tdd/` → `missing`; a manifest-owned `ds-ghost.md` the repo
 does not produce → `stale`; file count unchanged by the check, so it is read-only.
+
+---
+
+## Round 7 — gate 2 stopped emitting 29 WARNs on a fresh clone
+
+Found by actually running `./tools/selftest.sh` as `ds-verify-loop` asked, in the published clone
+where `upstream/` is fetched on demand. Gate 2 passed `--upstream` unconditionally, so a tree without
+upstream produced one `no upstream counterpart to compare` warning per skill — 29 lines of noise on
+a perfectly clean run.
+
+That is a defect even though the exit code was 0: a gate that cries wolf 29 times per run teaches
+the reader to skim, which is how the two warnings that matter (body shrank, alias points nowhere)
+get missed.
+
+Fixed in both places:
+- `validate.mjs` treats a missing upstream **root** as one skipped comparison, not N broken skills:
+  it prints one note and sets the comparison aside.
+- `selftest.sh` gate 2 only passes `--upstream` when `upstream/deepseek-stack/skills` exists, and
+  says which comparison it skipped (the same shape gate 4 already used).
+
+Verified three ways:
+
+| Case | Result |
+|---|---|
+| fresh clone, no upstream | `35 skills | 0 FAIL | 0 WARN`, whole run has **0** WARN lines, skip is stated once |
+| upstream fetched | `0 WARN`; gate 4 now executes and reports `rebuilt tree is byte-identical to skills/` |
+| body gutted in a throwaway copy | **still fires**: `WARN ds-mode body shrank to 6% of upstream (32->2 lines)` |
+
+The third case is the point: removing the noise did not weaken the check.

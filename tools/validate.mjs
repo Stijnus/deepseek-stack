@@ -29,7 +29,7 @@ const args = process.argv.slice(2);
 const flag = (f) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : undefined; };
 const VALUES = new Set(['--upstream', '--aliases', '--prefix']);
 const root = args.find((a, i) => !a.startsWith('--') && !VALUES.has(args[i - 1])) ?? 'skills';
-const upstream = flag('--upstream') ?? null;
+let upstream = flag('--upstream') ?? null;
 const aliasesDir = flag('--aliases') ?? null;
 const prefix = flag('--prefix') ?? null;
 
@@ -38,6 +38,13 @@ function fail(msg) {
   process.exit(1);
 }
 if (!existsSync(root)) fail(`no such skills dir: ${root}`);
+
+// A caller that names an upstream tree which is not there has a setup gap, not 29 broken skills.
+// Say so once and skip the comparison; per-skill "no upstream counterpart" noise hides real WARNs.
+if (upstream && !existsSync(upstream)) {
+  console.log(`note: upstream tree not found at ${upstream} — body-preservation comparison skipped`);
+  upstream = null;
+}
 
 /** Parse the subset of YAML frontmatter these skills use. Returns {data, body} or throws. */
 function parseFrontmatter(text) {
