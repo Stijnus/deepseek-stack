@@ -159,7 +159,7 @@ node tools/install.mjs
 node tools/install.mjs --uninstall
 ```
 
-Three gates protect the install, each because a real failure got through once:
+Four gates protect the install, each because a real failure got through once:
 
 - **Build stamp.** `tools/stamp.mjs` records digests of the patch, `skills/` and `aliases/` after
   a successful build; `install.mjs` refuses a tree that does not match. A hand edit, a tampered
@@ -168,6 +168,10 @@ Three gates protect the install, each because a real failure got through once:
   only afterwards. A conflicted patch leaves the previous good tree alone.
 - **Reconciliation.** A skill or alias deleted from this repo is removed from the install root on
   the next install, so a dead `/ds-audit` cannot keep answering.
+- **Uninstall verifies before deleting.** The manifest records the `sha256` written at install
+  time; `--uninstall` refuses to remove anything whose hash no longer matches, lists what it kept
+  and exits non-zero. A file edited after install survives unless you pass `--force`. Its manifest
+  entry is kept too, so `--force` can still find it later.
 
 Installing writes outside the workspace, so DSH asks for one approval; that is expected.
 
