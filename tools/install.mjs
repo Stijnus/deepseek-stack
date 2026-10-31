@@ -74,6 +74,18 @@ function aliasTargetFrom(text) {
 }
 
 /** Every regular file under dir, as paths relative to it. */
+/** Every entry under dir — regular files and directories — as paths relative to it. */
+function entriesUnder(dir, prefix = '') {
+  const out = [];
+  for (const n of readdirSync(dir).sort()) {
+    const p = join(dir, n);
+    const rel = `${prefix}${n}`;
+    out.push(rel);
+    if (statSync(p).isDirectory()) out.push(...entriesUnder(p, `${rel}/`));
+  }
+  return out;
+}
+
 function filesUnder(dir, prefix = '') {
   const out = [];
   for (const n of readdirSync(dir).sort()) {
@@ -125,12 +137,18 @@ if (uninstall) {
       const rec = manifest.skills[e.name];
       if (!statSync(e.dest).isDirectory()) return 'path is not a directory';
       if (rec.fileHashes) {
-        const now = filesUnder(e.dest);
-        const recorded = Object.keys(rec.fileHashes);
-        if (now.length !== recorded.length) return 'file list changed since install';
-        for (const rel of now) {
-          if (!(rel in rec.fileHashes)) return `unexpected file "${rel}"`;
-          if (sha(join(e.dest, rel)) !== rec.fileHashes[rel]) return `"${rel}" changed since install`;
+        for (const rel of Object.keys(rec.fileHashes)) {
+          const p = join(e.dest, rel);
+          if (!existsSync(p)) return `"${rel}" is missing`;
+          if (sha(p) !== rec.fileHashes[rel]) return `"${rel}" changed since install`;
+        }
+        // Directories that only hold recorded files are expected; anything else is a change.
+        const allowedDirs = new Set();
+        for (const rel of Object.keys(rec.fileHashes)) {
+          for (let i = rel.indexOf('/'); i !== -1; i = rel.indexOf('/', i + 1)) allowedDirs.add(rel.slice(0, i));
+        }
+        for (const rel of entriesUnder(e.dest)) {
+          if (!(rel in rec.fileHashes) && !allowedDirs.has(rel)) return `unexpected entry "${rel}"`;
         }
         return null;
       }
