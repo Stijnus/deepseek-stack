@@ -6,6 +6,7 @@
 #   gate 3  the installed root was never checked at all — only the build output was
 #   gate 4  a hand edit could drift skills/ away from the reviewable patch
 #   gate 5  uninstall deleted by name alone, so a file edited after install was destroyed
+#   gate 6  the installed-root check passed on a root that had drifted from the repo
 #
 # The only tree these gates mutate is a throwaway temp target; the real install is untouched.
 set -uo pipefail
@@ -24,6 +25,8 @@ node tools/validate.mjs skills --aliases aliases --expect-aliases 6 --upstream u
 step "gate 3: the installed root DSH actually reads"
 if [[ -d "$HOME/.agents/skills" ]]; then
   node tools/validate.mjs "$HOME/.agents/skills" --prefix ds- || bad "installed root contract"
+  # Contract-clean is not the same as current: a stale alias or an in-place edit still validates.
+  node tools/install.mjs --verify-install || bad "installed root drifted from this repo — run node tools/install.mjs"
 else
   echo "   skipped (nothing installed)"
 fi
@@ -69,6 +72,25 @@ if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
 else
   bad "install into a scratch target failed, so the uninstall check could not run"
 fi
+
+step "gate 6: the drift detector catches a changed install"
+tmp="$(mktemp -d)"
+if node tools/install.mjs --target "$tmp/skills" >/dev/null 2>&1; then
+  if node tools/install.mjs --verify-install --target "$tmp/skills" >/dev/null 2>&1; then
+    echo "   clean install verifies as byte-identical"
+  else
+    bad "verify-install rejected a clean install"
+  fi
+  printf '\n<!-- edited after install -->\n' >> "$tmp/skills/ds-plan.md"
+  if node tools/install.mjs --verify-install --target "$tmp/skills" >/dev/null 2>&1; then
+    bad "drift detector missed an edited file"
+  else
+    echo "   edited file reported as drift, exit non-zero"
+  fi
+else
+  bad "scratch install failed, so the drift detector could not be tested"
+fi
+rm -rf "$tmp"
 
 printf '\n'
 if (( fail )); then echo "SELFTEST FAILED"; exit 1; fi

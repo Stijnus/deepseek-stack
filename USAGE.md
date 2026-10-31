@@ -140,7 +140,8 @@ Run these from this repository's root.
 # one-time: fetch the pristine upstream at the pinned commit (upstream/ is not committed)
 ./tools/fetch-upstream.sh
 
-# all four gates at once: build stamp, source contract, installed root, rebuild determinism
+# all six gates at once: build stamp, source contract, installed-root drift, rebuild determinism,
+# uninstall verification, and the drift detector's own test
 ./tools/selftest.sh
 
 # check the contract by hand
@@ -156,6 +157,7 @@ node tools/validate.mjs ~/.agents/skills --prefix ds-     # what DSH actually re
 # install / inspect / remove
 node tools/install.mjs --dry-run
 node tools/install.mjs
+node tools/install.mjs --verify-install   # read-only: does ~/.agents/skills still match this repo?
 node tools/install.mjs --uninstall
 ```
 
@@ -172,6 +174,10 @@ Four gates protect the install, each because a real failure got through once:
   time; `--uninstall` refuses to remove anything whose hash no longer matches, lists what it kept
   and exits non-zero. A file edited after install survives unless you pass `--force`. Its manifest
   entry is kept too, so `--force` can still find it later.
+- **Drift detection.** `--verify-install` compares the installed root byte-for-byte against this
+  repo and reports `missing`, `differs` and `stale` entries (owned by the manifest but no longer
+  produced here). Contract validation alone cannot see a stale alias or an in-place edit; this can.
+  `selftest` gate 3 runs it, and gate 6 proves the detector itself still works.
 
 Installing writes outside the workspace, so DSH asks for one approval; that is expected.
 

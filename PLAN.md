@@ -164,3 +164,27 @@ Checked end to end on a scratch target: clean uninstall removed 35/35 and exited
 a line to `ds-plan.md` and `ds-ship/SKILL.md`, uninstall removed 33, kept 2, exited 1, and both
 edited files were still present; the manifest retained exactly `ds-ship` and `ds-plan`; `--force`
 then cleared them. `tools/selftest.sh` gained **gate 5** to keep this from regressing.
+
+---
+
+## Round 6 — gate 3 diffs the installed root against the repo
+
+Open item 3. `selftest` gate 3 only ran the contract validator over `~/.agents/skills`. That proves
+the installed root is *well-formed*, not that it is *current*: a stale alias the repo had dropped,
+or a skill edited in place, still validated clean.
+
+New read-only mode, `install.mjs --verify-install`, compares content byte-for-byte using the
+manifest for ownership and reports three classes:
+
+| Class | Meaning |
+|---|---|
+| `missing` | in this repo, not installed |
+| `differs` | installed content changed (edit, different pack, partial copy) |
+| `stale` | manifest-owned and installed, but no longer produced by this repo |
+
+Gate 3 now runs the contract check **and** the drift check. Gate 6 was added to test the detector
+itself (clean scratch install verifies; an edited file is reported and exits non-zero).
+
+Verified on scratch targets: clean install → `29 skill(s) + 6 alias(es) byte-identical`; editing
+`ds-plan.md` → `differs`; deleting `ds-tdd/` → `missing`; a manifest-owned `ds-ghost.md` the repo
+does not produce → `stale`; file count unchanged by the check, so it is read-only.
