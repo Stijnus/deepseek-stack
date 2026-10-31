@@ -1,7 +1,9 @@
 ---
 name: ds-revive
-description: "Brings an old PR up to date by checking if its idea still fits the current code, then rebasing, reworking or recommending it be closed. Use when asked to rebase, refresh, update or revive a stale PR, or /ds-revive."
+description: "Bring a stale PR up to date: check the idea still fits, then rebase, rework or recommend closing it. Use for 'rebase this', 'refresh' or 'revive an old PR'."
 ---
+
+# ds-revive
 
 Update the idea, not only the branch. A clean rebase does not prove the PR still belongs.
 
@@ -40,3 +42,14 @@ Update the idea, not only the branch. A clean rebase does not prove the PR still
 - No conflicts in Git does not mean the PR is current.
 - Separate facts you checked from your judgment.
 - Post PR comments only when asked, through `ds-pr-comments`.
+
+## On DeepSeek Harness
+
+- Steps 1 to 4 read state through `bash`: `git fetch`, `gh pr view <pr>`, `gh pr diff`,
+  `git range-diff`, `gh pr list --search`.
+- The step 7 worktree goes inside the session workspace. Writes outside it fail closed, so a
+  worktree under a temp directory outside the workspace will not work.
+- The step 10 lease push can stop on the approval gate, and a prompt is not a failed lease. Report
+  the gate and the lease failure as separate facts.
+- Step 9's checks are `bash` runs; label each failure real, pre-existing or infrastructure from
+  the output, not from the branch name.

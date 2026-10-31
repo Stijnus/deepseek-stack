@@ -1,6 +1,6 @@
 ---
 name: ds-sharpen
-description: "Restate the user's goal, make the task deeper rather than bigger, rewrite the prompt, and optionally attack the plan to find weak spots. Use before starting vague or high-stakes work, for 'sharpen this', 'what am I really asking', 'stress test this plan', or /ds-sharpen."
+description: "Sharpen a vague or high-stakes request: restate the goal, rewrite the prompt, and optionally stress-test the plan. Use for 'sharpen this', 'what am I really asking' or 'stress test this plan'."
 ---
 
 # ds-sharpen
@@ -29,3 +29,12 @@ A sharper prompt saves more tokens than any loop. Fix the ask before doing the w
 - Deeper, not bigger. Do not add features.
 - Do not apply fixes from the stress test. Report them.
 - A finding without output is an opinion. Leave it out.
+
+## On DeepSeek Harness
+
+- Step 4's stress test is two or three `subagent` calls in one assistant message, each given the
+  plan and the goal; they run concurrently and return reports, not edits.
+- Step 1's "ask one question" is `ask_user_question` with 2-4 options — a plain message is not a
+  question the harness blocks on.
+- A finding needs a run: the probe is a `bash` command whose output you paste. A finding without
+  one is an opinion and gets dropped, as the rules say.

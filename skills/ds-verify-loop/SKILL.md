@@ -1,6 +1,6 @@
 ---
 name: ds-verify-loop
-description: "Run edit, real check, read the actual error, fix the root cause, rerun, until the check passes or the cap is hit. Use when you change code that has tests, a type checker, a build, or a runnable app, or before you claim any fix works. Invoke as /ds-verify-loop."
+description: "Edit, run the real check, read the actual error, fix the root cause, rerun until it passes or the cap hits. Use before claiming a fix works, or when the change has a test, typecheck, build or app."
 ---
 
 # ds-verify-loop
@@ -32,3 +32,12 @@ Prove a change works by running the real check and fixing what it reports, not w
 - Run the real command every time. Do not reason about what it would print.
 - Change one thing per iteration so that you know what fixed it.
 - If no check exists, write the smallest one that fails without your change, then use the loop.
+
+## On DeepSeek Harness
+
+- The check is a `bash` command. Keep the command string stable between iterations so the
+  before/after comparison is real.
+- A slow suite: `bash({ run_in_background: true })`, then `job_output({ job_id, wait: true })`.
+  Do not busy-poll it and do not re-run it to see if it finished.
+- Approval-gated commands (push, install, destructive shell) can stop on a prompt. A prompt is
+  not a passing check — say what it asked and what you chose.

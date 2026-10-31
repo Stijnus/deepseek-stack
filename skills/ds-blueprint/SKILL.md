@@ -1,6 +1,6 @@
 ---
 name: ds-blueprint
-description: "Design the types, function signatures and module layout first, agree on that shape, then implement against it. Use when work is non-trivial and coding straight away would lock in the wrong structure, or for /ds-blueprint, 'design this first', 'architect this'."
+description: "Fix types, signatures and module layout before writing bodies, then implement one stub at a time. Use for 'design this first', 'architect this', or a change that would lock in the wrong shape."
 ---
 
 # ds-blueprint
@@ -27,3 +27,12 @@ Fix the shape of the code before writing the bodies, so the model fills in a pla
 - Signatures change only through step 6's revise path, never silently.
 - Keep each sketch file small enough to read in one pass.
 - Evidence is compiler and test output, not "it should work".
+
+## On DeepSeek Harness
+
+- Step 2's sketches: one `subagent` call each, in one assistant message so they build in parallel.
+  Give every worker the same brief and a different structural bet.
+- Step 4 is a `bash` run of the real type checker. Paste the command with its output.
+- Step 5's "wait for agreement" is `ask_user_question` with the sketches as options.
+- Unattended: `create_goal` keeps the run alive across compaction, and the choice goes in
+  `PROGRESS.md` (the /ds-ledger route).

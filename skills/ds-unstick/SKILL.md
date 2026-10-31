@@ -1,6 +1,6 @@
 ---
 name: ds-unstick
-description: "Break out of a repeating failure: name the assumption behind all the failed fixes, test it directly, list three other approaches, pick one, and restart clean if needed. Use when the same error or wrong behavior comes back after two fix attempts, or when you notice you are retrying small variations. Invoke as /ds-unstick."
+description: "Break a repeating failure: name the assumption behind every failed fix, test it directly, list three other approaches, pick one, restart clean. Use when the same error survives two fixes."
 ---
 
 # ds-unstick
@@ -31,3 +31,14 @@ When two fixes fail the same way, the problem is usually a wrong belief, not a w
 - Evidence beats reasoning. If a probe takes a minute, run it.
 - Keep the failed-attempt list, because it is the most useful part of the report.
 - Use a clean state before a new approach, so that old edits cannot hide the result.
+
+## On DeepSeek Harness
+
+- Step 4's probe is a `bash` one-liner with a yes-or-no answer: a print, a log line, `which`,
+  `--version`, or a grep for the real call site. Keep the command string stable and paste its output.
+- A probe that takes minutes: `bash({ run_in_background: true })`, then `job_output({ job_id, wait: true })`.
+  Do not sleep on it, and do not re-run it to see if it finished.
+- Step 8's clean state is plain `bash` git — `git stash` or `git checkout -- <files>` — then apply only
+  the chosen approach.
+- Two rounds failed and you need direction: `ask_user_question` with the attempt list, the tested
+  assumptions and the probe output attached. A prose "what should I do" gets a worse answer.

@@ -1,6 +1,6 @@
 ---
 name: ds-swarm
-description: "Fan out N parallel workers on slices of a job or on a race, collect every result, and return one evidence-backed report. Use for wide coverage, audits, races between approaches or exploration, or for /ds-swarm, 'swarm this', 'split this across workers'."
+description: "Fan out N parallel subagents on slices of a job or a race, collect every result, then one evidence-backed report. Use for wide coverage or 'swarm this'; Orca worktrees: orchestration."
 ---
 
 # ds-swarm
@@ -29,3 +29,14 @@ Split work that is wide but shallow across parallel workers, then merge their pr
 - Workers do not share writable state.
 - A missing slice is never counted as passing.
 - Report what workers proved, not what they claimed.
+
+## On DeepSeek Harness
+
+- Step 5 is N `subagent` calls in ONE assistant message. Only calls in the same message run in parallel;
+  one message per worker runs them as a queue.
+- Below about eight slices, hand-written `subagent` calls are easier to audit. Past that, switch to
+  `workflow`: a JS script that fans out subagents with phases and structured results.
+- Workers write inside the workspace only (writes outside it fail closed): one `slices/<name>/` per
+  worker that writes, never a shared file (step 4).
+- A swarm that must survive turns and stay inspectable is Agent Teams: `spawn_teammate` per slice plus
+  `team_task_*` tasks. Subagents return a report and vanish; teammates persist.

@@ -1,7 +1,9 @@
 ---
 name: ds-design
-description: "Builds a frontend with a clear visual direction instead of the generic AI look. Use when you create a new page, app screen, or component, or restyle one that looks templated. Run as /ds-design."
+description: "Build a web frontend with a real visual direction, not the generic AI look: direction note, tokens, every state, accessibility. Use for a new page, screen or restyle; native macOS: design-kit."
 ---
+
+# ds-design
 
 Build a UI that does not look like the default output for any similar prompt.
 
@@ -45,3 +47,16 @@ Use one of these only if the brief asks for it:
 
 - When the brief specifies a font, color, or style, use it, even if it is on the banned list.
 - A refinement keeps the identity of the UI. A redesign keeps its content and function.
+
+## On DeepSeek Harness
+
+- `moodboard({ action: "active" })` before step 2. Those pinned references are this project's
+  style authority: match their typography, palette, spacing, radius and iconography rather than
+  inventing a look or falling back on the banned defaults.
+- Asking a narrower question: `moodboard({ action: "query", tags: ["palette"] })` returns only the
+  references tagged for what you are deciding.
+- If `vibe-to-ui` is also loaded it carries its own inspiration library. The pinned `moodboard` is
+  still the authority for this project; use the other library only when the user asks for it by
+  name, and never mix the two palettes in one screen.
+- Step 9's screenshots are a `bash` run of the repo's own build or snapshot command at about
+  1440px and 390px. Fix in one batch, then take new ones.

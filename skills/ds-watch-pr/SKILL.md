@@ -1,7 +1,9 @@
 ---
 name: ds-watch-pr
-description: "Watches a pull request through CI and review, fixes real findings and stops when it is ready, merged or blocked. Use when the user asks to watch, monitor or babysit a PR, or /ds-watch-pr."
+description: "Watch a PR through CI and review, fix real findings, and stop when it is ready, merged or blocked. Use to watch, monitor or babysit a PR, or when checks are pending."
 ---
+
+# ds-watch-pr
 
 Keep one PR moving until it is green and reviewed, with as little noise as possible.
 
@@ -37,3 +39,14 @@ It prints one line per new check failure, finished check run, comment or review,
 - When an event needs no action, say nothing. No "still waiting" messages.
 - Merge only if the user asked for it. Otherwise report ready.
 - Keep the PR small. Prefer fixes that delete or narrow code.
+
+## On DeepSeek Harness
+
+- Step 2 is `bash({ command: "python3 <abs path>/scripts/watch_pr.py <pr>", run_in_background: true })`.
+  Keep the returned `job_id`; one watcher means one job.
+- Each event is `job_output({ job_id, wait: true })`. Never `sleep`, never a second watcher, and
+  never re-run the script to see whether it finished.
+- Exit 1 means act: fix, `git push`, then kill the job and start a fresh watcher on the new head.
+- `git push` and `--force-with-lease` can stop on the approval gate. A prompt is not a push:
+  report what it asked and what you chose before you count the cycle.
+- The rate-limit stop condition is a `bash` `gh api rate_limit` read: wait the reset once, then stop.

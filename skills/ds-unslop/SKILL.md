@@ -1,9 +1,9 @@
 ---
 name: ds-unslop
-description: "Remove AI writing tells from prose and code comments, then rewrite in plain, specific English. Use when writing or editing replies, docs, READMEs, PR descriptions, commit messages, or comments, or when the user types /ds-unslop."
+description: "Strip AI writing tells from prose and code comments, then rewrite in plain, specific English. Use when drafting replies, docs, READMEs, PR bodies, commits or comments."
 ---
 
-# Unslop
+# ds-unslop
 
 Write clean as you draft. Then scan for these tells and rewrite. Keep the meaning and tone.
 
