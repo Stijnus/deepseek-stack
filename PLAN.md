@@ -331,3 +331,35 @@ already fixed in round 1 — but three were new and adopted:
 
 Lesson recorded: two reviewers is not double review, it is a race. `ds-review-loop` says one reviewer
 at a time for a reason, and a verdict on a stale diff is worse than no verdict.
+
+---
+
+## Round 11 — the DSH contract is checked, not assumed
+
+Every design decision in this pack rests on six behaviours read out of the installed `app.asar`
+(catalog filter, gesture filter, name grammar, invocation keys, user-invocable default, UI marker).
+They were pinned by comments only: a DSH upgrade could drop the gesture filter and the six aliases
+would stop answering while every repo check stayed green.
+
+`tools/dsh-contract-check.mjs` reads the installed app **read-only** and asserts each one:
+
+| Assumption | If it stops holding |
+|---|---|
+| catalog filtered by `isModelInvocable` | hidden aliases would cost catalog tokens |
+| gesture filtered by `isUserInvocable` | `/ds-*` gestures stop resolving |
+| `SKILL_NAME` kebab grammar | names we ship could be rejected |
+| `disable-model-invocation` parsed | aliases would leak into the model catalog |
+| `userInvocable` defaults true | aliases would need an explicit key |
+| UI marks non-model-invocable skills | alias text would be invisible in the `/` menu |
+
+Exit 0 when the assumptions hold, 1 when one breaks (naming it), 2 with `--require` if the app is
+missing. On a runner without the app it skips, so CI stays portable.
+
+**Self-test:** `--self-test` builds a synthetic asar with the real header shape and proves both
+directions — intact fixture exits 0, an altered filter exits 1 with a named FAIL. `selftest` gate 8
+runs it on every pass, and the real check when the app is present.
+
+Two bugs in my own checker, found by running it: `read()` closed over a file descriptor that
+`readAsar` had already closed, so every buffer came back zeroed, and the UI check targeted a 404-byte
+re-export shim instead of `lib/client.js`. Both fixed before wiring the gate; a check that cannot
+fail would have been worse than no check.

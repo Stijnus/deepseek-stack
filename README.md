@@ -99,6 +99,7 @@ tools/
                      --verify-install checks the installed root against this repo
   selftest.sh        the four gates
   conflicts.mjs      name collisions and overlapping routing triggers
+  dsh-contract-check.mjs  assert the shipped DSH app still matches this pack's assumptions
 docs/              the DSH contract, the optimization spec, the conflict analysis
 USAGE.md           how to use the pack on DSH
 PLAN.md            build log, including what went wrong

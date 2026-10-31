@@ -158,12 +158,19 @@ node tools/validate.mjs ~/.agents/skills --prefix ds-     # what DSH actually re
 # after editing a skill by hand, capture the edit in the patch (else the next build loses it)
 ./tools/build.sh --regen-patch
 
+# assert the installed DSH app still matches the pack's assumptions (skips if absent)
+node tools/dsh-contract-check.mjs
+
 # install / inspect / remove
 node tools/install.mjs --dry-run
 node tools/install.mjs
 node tools/install.mjs --verify-install   # read-only: does ~/.agents/skills still match this repo?
 node tools/install.mjs --uninstall
 ```
+
+One check guards the pack's premises: `tools/dsh-contract-check.mjs` reads the installed app.asar and
+asserts the six DSH behaviours the aliases and catalog rely on. A DSH upgrade that changed, say, the
+gesture filter would fail this instead of silently breaking the `/ds-*` names.
 
 Four gates protect the install, each because a real failure got through once:
 
