@@ -24,8 +24,8 @@
 // Usage:
 //   node tools/install.mjs                 install
 //   node tools/install.mjs --dry-run       show the plan only
-//   node tools/install.mjs --uninstall     remove what this tool installed
-//   node tools/install.mjs --force         allow replacing something we do not own
+//   node tools/install.mjs --uninstall     remove what this tool installed, verifying sha256
+//   node tools/install.mjs --force         also remove/replace entries that changed since install
 //   node tools/install.mjs --target <dir>  override the skills root (must end in /skills)
 
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, cpSync, rmSync, mkdirSync } from 'node:fs';
@@ -70,26 +70,68 @@ const ownedSkills = new Set(Object.keys(manifest.skills || {}));
 const ownedAliases = new Set(Object.keys(manifest.aliases || {}));
 
 // ---------------------------------------------------------------- uninstall
+//
+// Ownership is not permission to delete. The manifest records the sha256 written at install time;
+// a mismatch means the file changed afterwards — a local edit, a different pack, or a hand-written
+// skill that happens to reuse the name. Removing it would destroy work, so uninstall verifies
+// first and keeps anything it cannot account for. `--force` overrides, deliberately.
 if (uninstall) {
-  const present = [
-    ...[...ownedSkills].map((n) => join(target, n)),
-    ...[...ownedAliases].map((n) => join(target, `${n}.md`)),
-  ].filter((p) => existsSync(p));
-  if (!present.length) {
-    console.log('nothing to uninstall: no manifest-owned entries present in ' + target);
+  const entries = [];
+  for (const n of ownedSkills) {
+    entries.push({ kind: 'skill', name: n, dest: join(target, n), recorded: manifest.skills?.[n]?.sha256 ?? null });
+  }
+  for (const n of ownedAliases) {
+    entries.push({ kind: 'alias', name: n, dest: join(target, `${n}.md`), recorded: manifest.aliases?.[n]?.sha256 ?? null });
+  }
+
+  // Skills were recorded by their SKILL.md digest; aliases are a single file.
+  const hashNow = (e) => {
+    const f = e.kind === 'skill' ? join(e.dest, 'SKILL.md') : e.dest;
+    return existsSync(f) ? sha(f) : null;
+  };
+
+  const toRemove = [];
+  const toKeep = [];
+  const alreadyGone = [];
+  for (const e of entries) {
+    const now = hashNow(e);
+    if (now === null) { alreadyGone.push(e); continue; }
+    if (!force && !e.recorded) { toKeep.push({ ...e, why: 'manifest has no recorded sha256' }); continue; }
+    if (!force && e.recorded !== now) { toKeep.push({ ...e, why: 'sha256 differs — changed since install' }); continue; }
+    toRemove.push(e);
+  }
+
+  if (!toRemove.length && !toKeep.length && !alreadyGone.length) {
+    console.log('nothing to uninstall: no manifest-owned entries in ' + target);
     process.exit(0);
   }
-  for (const p of present) {
-    console.log(`${dryRun ? 'would remove' : 'remove'}  ${p}`);
-    if (!dryRun) rmSync(p, { recursive: true, force: true });
+
+  for (const e of toRemove) {
+    console.log(`${dryRun ? 'would remove' : 'remove'}  ${e.dest}  ${force ? '(forced)' : '(sha256 verified)'}`);
+    if (!dryRun) rmSync(e.dest, { recursive: true, force: true });
   }
+  for (const e of toKeep) {
+    console.log(`${dryRun ? 'would keep  ' : 'keep      '}${e.dest}  — ${e.why}; use --force to delete`);
+  }
+  for (const e of alreadyGone) {
+    console.log(`already gone  ${e.dest}`);
+  }
+
   if (!dryRun) {
-    delete manifest.skills;
-    delete manifest.aliases;
-    writeFileSync(manifestPath, JSON.stringify({ ...manifest, uninstalledAt: new Date().toISOString() }, null, 2) + '\n');
-    console.log(`\nuninstalled ${present.length} entrie(s); manifest kept at ${manifestPath}`);
+    // Only forget what is actually no longer installed, so a kept entry stays discoverable.
+    for (const e of [...toRemove, ...alreadyGone]) {
+      if (e.kind === 'skill') { if (manifest.skills) delete manifest.skills[e.name]; }
+      else { if (manifest.aliases) delete manifest.aliases[e.name]; }
+    }
+    manifest.uninstalledAt = new Date().toISOString();
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
   }
-  process.exit(0);
+
+  console.log(`\n${dryRun ? 'would remove' : 'removed'} ${toRemove.length} entrie(s)` +
+    (toKeep.length ? `, kept ${toKeep.length} (unverified — see above)` : '') +
+    (alreadyGone.length ? `, ${alreadyGone.length} already absent` : '') +
+    `; manifest ${dryRun ? 'unchanged' : 'updated'}`);
+  process.exit(toKeep.length ? 1 : 0);
 }
 
 // ---------------------------------------------------------------- gate 1: build stamp

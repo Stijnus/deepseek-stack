@@ -142,3 +142,25 @@ they are not.
 Chosen trade: the HIGH cluster could have been resolved by renaming `ds-review-loop`, which costs
 nothing per session but breaks every existing reference to it. Paying +9 chars to keep the name was
 the cheaper side of that trade.
+
+---
+
+## Round 5 — uninstall verifies sha256
+
+Open item 1. `install.mjs --uninstall` used to delete every manifest-owned name outright, so a
+skill or alias edited after install was destroyed without a word. It now hashes first.
+
+| Case | Behaviour |
+|---|---|
+| hash matches the manifest | removed |
+| hash differs | **kept**, reported, uninstall exits non-zero; manifest entry retained so `--force` can find it |
+| no recorded hash (older manifest) | kept, same rule |
+| file already absent | reported as already gone, entry dropped from the manifest |
+| `--force` | deletes regardless — the deliberate override |
+
+Skills are verified by their recorded `SKILL.md` digest, aliases by their file digest.
+
+Checked end to end on a scratch target: clean uninstall removed 35/35 and exited 0; after appending
+a line to `ds-plan.md` and `ds-ship/SKILL.md`, uninstall removed 33, kept 2, exited 1, and both
+edited files were still present; the manifest retained exactly `ds-ship` and `ds-plan`; `--force`
+then cleared them. `tools/selftest.sh` gained **gate 5** to keep this from regressing.
