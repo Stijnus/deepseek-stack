@@ -95,7 +95,8 @@ tools/
   optimize.patch     every edit to upstream, as one reviewable diff
   validate.mjs       DSH skill contract + pack budgets + alias integrity
   stamp.mjs          bind an install to a successful build
-  install.mjs        install skills + aliases, reconcile removals, verify what landed
+  install.mjs        install skills + aliases, reconcile removals, verify what landed,
+                     --verify-install checks the installed root against this repo
   selftest.sh        the four gates
   conflicts.mjs      name collisions and overlapping routing triggers
 docs/              the DSH contract, the optimization spec, the conflict analysis
@@ -113,7 +114,7 @@ PLAN.md            build log, including what went wrong
 
 ./tools/build.sh                # rebuild skills/ from upstream + patch (validates before swapping)
 ./tools/build.sh --regen-patch  # after a hand edit, capture it into the patch
-node tools/install.mjs          # install / --dry-run / --uninstall
+node tools/install.mjs          # install / --dry-run / --uninstall / --verify-install
 ```
 
 Three gates protect an install, each because a real failure once got through: a build stamp that

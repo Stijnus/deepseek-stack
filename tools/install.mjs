@@ -24,6 +24,7 @@
 // Usage:
 //   node tools/install.mjs                 install
 //   node tools/install.mjs --dry-run       show the plan only
+//   node tools/install.mjs --verify-install   read-only: does the installed root still match this repo?
 //   node tools/install.mjs --uninstall     remove what this tool installed, verifying sha256
 //   node tools/install.mjs --force         also remove/replace entries that changed since install
 //   node tools/install.mjs --target <dir>  override the skills root (must end in /skills)
@@ -59,6 +60,18 @@ if (!target.endsWith('/skills')) {
 
 const sha = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 const humanSize = (n) => (n < 1024 ? `${n}B` : `${(n / 1024).toFixed(1)}KB`);
+
+/** Every regular file under dir, as paths relative to it. */
+function filesUnder(dir, prefix = '') {
+  const out = [];
+  for (const n of readdirSync(dir).sort()) {
+    const p = join(dir, n);
+    const st = statSync(p);
+    if (st.isDirectory()) out.push(...filesUnder(p, `${prefix}${n}/`));
+    else if (st.isFile()) out.push(`${prefix}${n}`);
+  }
+  return out;
+}
 
 function readManifest() {
   if (!existsSync(manifestPath)) return { version: 2, skills: {}, aliases: {} };
@@ -132,6 +145,55 @@ if (uninstall) {
     (alreadyGone.length ? `, ${alreadyGone.length} already absent` : '') +
     `; manifest ${dryRun ? 'unchanged' : 'updated'}`);
   process.exit(toKeep.length ? 1 : 0);
+}
+
+// ---------------------------------------------------------------- verify-install (read-only)
+//
+// Contract validation (tools/validate.mjs) proves the installed root is *well-formed*. It says
+// nothing about whether it is *current*: a stale alias left behind after the repo dropped it, or a
+// skill directory edited in place, still validates clean. This compares content byte-for-byte.
+if (has('--verify-install')) {
+  const srcSkills = existsSync(skillsSrc)
+    ? readdirSync(skillsSrc).filter((n) => statSync(join(skillsSrc, n)).isDirectory()).sort()
+    : [];
+  const srcAliases = existsSync(aliasesSrc)
+    ? readdirSync(aliasesSrc).filter((n) => n.endsWith('.md') && statSync(join(aliasesSrc, n)).isFile()).map((n) => basename(n, '.md')).sort()
+    : [];
+  const missing = [];
+  const different = [];
+  const stale = [];
+
+  for (const n of srcSkills) {
+    const dst = join(target, n);
+    if (!existsSync(dst)) { missing.push(`skills/${n}/`); continue; }
+    for (const f of filesUnder(join(skillsSrc, n))) {
+      const a = join(skillsSrc, n, f);
+      const b = join(dst, f);
+      if (!existsSync(b)) missing.push(`skills/${n}/${f}`);
+      else if (sha(a) !== sha(b)) different.push(`skills/${n}/${f}`);
+    }
+  }
+  for (const n of srcAliases) {
+    const a = join(aliasesSrc, `${n}.md`);
+    const b = join(target, `${n}.md`);
+    if (!existsSync(b)) missing.push(`${n}.md`);
+    else if (sha(a) !== sha(b)) different.push(`${n}.md`);
+  }
+  // Owned by the manifest, still installed, but no longer produced by this repo.
+  for (const n of ownedSkills) if (!srcSkills.includes(n) && existsSync(join(target, n))) stale.push(`skills/${n}/`);
+  for (const n of ownedAliases) if (!srcAliases.includes(n) && existsSync(join(target, `${n}.md`))) stale.push(`${n}.md`);
+
+  for (const m of missing) console.log(`missing    ${m}   (in this repo, not installed)`);
+  for (const d of different) console.log(`differs    ${d}   (installed content changed)`);
+  for (const s of stale) console.log(`stale      ${s}   (installed, no longer produced by this repo)`);
+
+  const drift = missing.length + different.length + stale.length;
+  if (drift) {
+    console.log(`\n${drift} drift(s) between ${target} and this repo — run: node tools/install.mjs`);
+    process.exit(1);
+  }
+  console.log(`installed root matches this repo: ${srcSkills.length} skill(s) + ${srcAliases.length} alias(es) byte-identical`);
+  process.exit(0);
 }
 
 // ---------------------------------------------------------------- gate 1: build stamp
