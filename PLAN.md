@@ -277,3 +277,26 @@ the declaration, and that a missing declared target is rejected.
 
 Reinstall was required (the installed aliases changed) — gate 3 caught the drift with six
 `differs` entries before the reinstall, which is that gate earning its keep.
+
+---
+
+## Round 10 — a skill is a directory, so hash every file
+
+The manifest recorded one `sha256` per skill: `SKILL.md`. Everything else in a skill directory was
+therefore unprotected — `ds-watch-pr` ships `scripts/watch_pr.py`, and editing that script and then
+running `--uninstall` would have deleted the edit without a word. Uninstall was verifying the one
+file nobody changes.
+
+`install.mjs` now records a per-file hash map (manifest **v3**) and uninstall compares all of them:
+
+| Case | Result |
+|---|---|
+| every recorded file matches | entry removed |
+| any file's hash differs | **kept**, named (`"scripts/watch_pr.py" changed since install`), exit non-zero |
+| an unexpected extra file appeared | kept — safer than deleting something unrecorded |
+| a recorded file is missing | kept, reported |
+| older v2 manifest (SKILL.md hash only) | falls back to that check instead of failing loudly |
+| `--force` | deletes regardless |
+
+`selftest` gate 5 gained a second case: install into a scratch target, edit
+`ds-watch-pr/scripts/watch_pr.py`, and assert uninstall keeps the skill, then that `--force` clears it.

@@ -110,20 +110,40 @@ if (uninstall) {
   }
 
   // Skills were recorded by their SKILL.md digest; aliases are a single file.
-  const hashNow = (e) => {
-    const f = e.kind === 'skill' ? join(e.dest, 'SKILL.md') : e.dest;
-    return existsSync(f) ? sha(f) : null;
+  // A skill is a directory. Checking only SKILL.md left any other file unprotected — editing
+  // scripts/watch_pr.py and uninstalling would delete it silently. Every recorded file is compared,
+  // and an unexpected extra file is treated as a change too (safer to keep than to delete).
+  const violation = (e) => {
+    if (e.kind === 'alias') {
+      return !e.recorded || sha(e.dest) === e.recorded ? null : 'sha256 differs — changed since install';
+    }
+    const rec = manifest.skills?.[e.name];
+    if (!rec) return 'no manifest entry for this directory';
+    if (rec.fileHashes) {
+      const now = filesUnder(e.dest);
+      const recorded = Object.keys(rec.fileHashes);
+      if (now.length !== recorded.length) return 'file list changed since install';
+      for (const rel of now) {
+        if (!(rel in rec.fileHashes)) return `unexpected file "${rel}"`;
+        if (sha(join(e.dest, rel)) !== rec.fileHashes[rel]) return `"${rel}" changed since install`;
+      }
+      return null;
+    }
+    // Older manifests recorded only SKILL.md; keep that behaviour rather than refusing loudly.
+    const sk = join(e.dest, 'SKILL.md');
+    if (!existsSync(sk)) return 'SKILL.md is missing';
+    return rec.sha256 && sha(sk) === rec.sha256 ? null : 'sha256 differs — changed since install';
   };
 
   const toRemove = [];
   const toKeep = [];
   const alreadyGone = [];
   for (const e of entries) {
-    const now = hashNow(e);
-    if (now === null) { alreadyGone.push(e); continue; }
-    if (!force && !e.recorded) { toKeep.push({ ...e, why: 'manifest has no recorded sha256' }); continue; }
-    if (!force && e.recorded !== now) { toKeep.push({ ...e, why: 'sha256 differs — changed since install' }); continue; }
-    toRemove.push(e);
+    if (!existsSync(e.dest)) { alreadyGone.push(e); continue; }
+    if (force) { toRemove.push(e); continue; }
+    const why = violation(e);
+    if (why) toKeep.push({ ...e, why });
+    else toRemove.push(e);
   }
 
   if (!toRemove.length && !toKeep.length && !alreadyGone.length) {
@@ -289,7 +309,14 @@ for (const n of skillNames) {
   if (dryRun) continue;
   rmSync(dest, { recursive: true, force: true });
   cpSync(from, dest, { recursive: true });
-  manifest.skills[n] = { descriptionChars: desc ? [...desc].length : null, sha256: sha(join(dest, 'SKILL.md')), files, installedAt: new Date().toISOString() };
+  const fileHashes = Object.fromEntries(filesUnder(dest).map((rel) => [rel, sha(join(dest, rel))]));
+  manifest.skills[n] = {
+    descriptionChars: desc ? [...desc].length : null,
+    sha256: fileHashes['SKILL.md'] ?? null, // kept for older readers
+    fileHashes,
+    files,
+    installedAt: new Date().toISOString(),
+  };
   installed++;
 }
 
@@ -349,7 +376,7 @@ const upstreamCommit = (() => {
 })();
 
 writeFileSync(manifestPath, JSON.stringify({
-  version: 2,
+  version: 3, // v3: per-file hashes; v2 recorded only SKILL.md
   source: 'aicodeking/deepseek-stack',
   upstreamCommit,
   optimizedFor: 'DeepSeek Harness (dsh-skill-filesystem contract)',

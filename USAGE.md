@@ -176,7 +176,8 @@ Four gates protect the install, each because a real failure got through once:
   only afterwards. A conflicted patch leaves the previous good tree alone.
 - **Reconciliation.** A skill or alias deleted from this repo is removed from the install root on
   the next install, so a dead `/ds-audit` cannot keep answering.
-- **Uninstall verifies before deleting.** The manifest records the `sha256` written at install
+- **Uninstall verifies before deleting.** The manifest records a `sha256` for **every file** of each
+  installed entry (v3). The `sha256` written at install
   time; `--uninstall` refuses to remove anything whose hash no longer matches, lists what it kept
   and exits non-zero. A file edited after install survives unless you pass `--force`. Its manifest
   entry is kept too, so `--force` can still find it later.
