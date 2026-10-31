@@ -217,6 +217,3 @@ Verified three ways:
 | body gutted in a throwaway copy | **still fires**: `WARN ds-mode body shrank to 6% of upstream (32->2 lines)` |
 
 The third case is the point: removing the noise did not weaken the check.
-
-Merged as PR #4, `main` = `21594c49` (2026-10-31). The published clone now runs all six gates with
-no warning noise on a clean tree.
